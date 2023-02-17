@@ -7,7 +7,7 @@
 {% endif %}
     <body>
         <div class="title">
-            <h1>Enter your information below</h1>
+            <h1>Enter your information below: </h1>
         </div>
         <div id="content">
             <form method="post" action="{{ url_for('register_user') }}">
@@ -18,5 +18,12 @@
                 <input type="submit" />
             </form>
          </div>
+         {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <span style="color:red"><h4> {{ message }}</h4></span>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </body>
 <a href='/'>Home</a>

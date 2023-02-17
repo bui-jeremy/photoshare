@@ -10,7 +10,7 @@
 ###################################################
 
 import flask
-from flask import Flask, Response, request, render_template, redirect, url_for
+from flask import Flask, Response, request, render_template, redirect, url_for, session, flash
 from flaskext.mysql import MySQL
 import flask_login
 
@@ -138,6 +138,7 @@ def register_user():
 		return render_template('hello.html', name=email, message='Account Created!')
 	else:
 		print("couldn't find all tokens")
+		flash("Email already in use! Use another one or login with the existing e-mail.")
 		return flask.redirect(flask.url_for('register'))
 
 def getUsersPhotos(uid):
