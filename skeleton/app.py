@@ -10,6 +10,7 @@
 ###################################################
 
 import flask
+from flask import Flask, Response, request, render_template, redirect, url_for
 from flask import Flask, Response, request, render_template, redirect, url_for, session, flash
 from flaskext.mysql import MySQL
 import flask_login
@@ -23,7 +24,7 @@ app.secret_key = 'super secret string'  # Change this!
 
 #These will need to be changed according to your creditionals
 app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'mysql460'
 app.config['MYSQL_DATABASE_DB'] = 'photoshare'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
@@ -116,7 +117,7 @@ def unauthorized_handler():
 #you can specify specific methods (GET/POST) in function header instead of inside the functions as seen earlier
 @app.route("/register", methods=['GET'])
 def register():
-	return render_template('register.html', supress='True')
+	return render_template('register.html', supress=False)
 
 @app.route("/register", methods=['POST'])
 def register_user():
@@ -135,11 +136,191 @@ def register_user():
 		user = User()
 		user.id = email
 		flask_login.login_user(user)
-		return render_template('hello.html', name=email, message='Account Created!')
+		return render_template('hello.html', name=email, message='Account Created!') 
 	else:
 		print("couldn't find all tokens")
 		flash("Email already in use! Use another one or login with the existing e-mail.")
 		return flask.redirect(flask.url_for('register'))
+
+
+
+
+
+
+
+
+
+### new stuff:
+
+######## FRIEND METHODS #########
+
+
+# 	still need to make changes so friend search only appears when user is logged in
+#	friend is added immediately upon finding them and hitting submit button
+
+
+
+# search for one particular user, adds to friends if user exists
+@app.route('/', methods=['POST'])
+def add_friends():
+	try:
+		email=request.form.get('email')
+
+	except:
+		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
+		return flask.redirect(flask.url_for('friends'))
+	cursor = conn.cursor()
+	test =  isEmailUnique(email)
+
+	if not test:
+		#email exists
+		super = getUserIdFromEmail(flask_login.current_user.id)
+		sub = getUserIdFromEmail(email)
+		if super == sub: # checks if searching for themselves
+			return render_template('hello.html', message='cannot befriend yourself')
+		elif alreadyFriends(super, sub): 
+			return render_template('hello.html', message='already friends with this user')
+		print(cursor.execute("INSERT INTO Friends (super_user_id, sub_user_id) VALUES ('{0}', '{1}')".format(int(super), int(sub))))
+		conn.commit()
+		return render_template('hello.html', message='user {0} added as a friend'.format(email))
+	else:
+		#email does not exist in database
+		return render_template('hello.html', message='user does not exist')
+
+
+#checks if user relationship is already in the table
+def alreadyFriends(super, sub):
+	cursor = conn.cursor()
+	if cursor.execute("SELECT super_user_id  FROM Friends WHERE (super_user_id = '{0}' AND sub_user_id = '{1}')".format(super, sub)):
+		#this means there are greater than zero entries with this relationship
+		return True
+	else:
+		return False
+
+
+# adds friends to array to be printed in html table
+@app.route("/friends", methods=['GET'])
+def friends():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor()
+	cursor.execute("SELECT sub_user_id FROM Friends WHERE super_user_id = '{0}'".format(uid))
+	friends = []
+	for i in cursor:
+		fid = i[0]
+		friends.append(getEmailFromUserId(fid))
+
+	return render_template('friends.html', data=friends)
+
+#takes int of user id and returns email
+def getEmailFromUserId(uid):
+	cursor = conn.cursor()
+	cursor.execute("SELECT email FROM Users WHERE user_id = '{0}'".format(uid))
+	return cursor.fetchone()[0]
+
+
+######## END FRIEND METHODS #########
+
+
+
+######## ALBUM METHODS ###########
+
+@app.route("/album", methods=['GET'])
+def album():
+	albums = view_albums()
+	return render_template('album.html', data=albums)
+
+@app.route("/album", methods=['POST', 'GET'])
+def album_handler():
+	cmd = request.form.get("cmd")
+	album = request.form.get('album') 
+	if cmd == "View":
+		return viewAlbumPage(album)
+	elif cmd == "Delete":
+		return delete_album(album)
+	else:
+		return create_album()
+
+
+@app.route("/viewAlbum")
+def viewAlbumPage(album):
+	album_id = getAlbumId(album)
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	photos=getUsersPhotosFromAlbum(uid, album_id)
+
+	return render_template('viewAlbum.html', album_name=album, photos=photos, base64=base64)
+
+@app.route("/album")
+def delete_album(album):
+	album_id = getAlbumId(album)
+	cursor = conn.cursor()
+	print(cursor.execute("DELETE FROM Albums WHERE album_id = '{0}'".format(int(album_id))))
+	conn.commit()
+	return render_template('album.html', message="deleted", data=view_albums())
+
+
+
+from datetime import date # need to move this to the top, but i wanted to keep new stuff in one place for now
+
+@app.route("/album")
+def create_album():
+	try:
+		album_name=request.form.get('album_name')
+
+	except:
+		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
+		return flask.redirect(flask.url_for('album'))
+	cursor = conn.cursor()
+	test = albumExists(album_name)
+	
+	if not test:
+		uid = getUserIdFromEmail(flask_login.current_user.id)
+		doc = date.today()
+		print(cursor.execute("INSERT INTO Albums (owner_id, album_name, date_of_creation) VALUES ('{0}', '{1}', '{2}')".format(int(uid), album_name, doc)))
+		conn.commit()
+		return render_template('album.html', message = 'album created', data=view_albums())
+	else:
+		return render_template('album.html', message='album under same name already exists', data=view_albums())
+
+
+def view_albums():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor()
+	cursor.execute("SELECT album_name FROM Albums WHERE owner_id = '{0}'".format(uid))
+	albums = []
+	for i in cursor:
+		album = i[0]
+		albums.append(album)
+	return (albums)
+
+def albumExists(album_name):
+	#use this to check if an album has already been created
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor()
+	if cursor.execute("SELECT album_name  FROM Albums WHERE (album_name = '{0}' AND owner_id = '{1}')".format(album_name, uid)):
+		#this means there are greater than zero entries with that album name for this user
+		return True
+	else:
+		return False
+
+def getAlbumId(album_name):
+	cursor = conn.cursor()
+	cursor.execute("SELECT album_id  FROM Albums WHERE album_name = '{0}'".format(album_name))
+	return cursor.fetchone()[0]
+
+
+def getUsersPhotosFromAlbum(uid, album_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE (user_id = '{0}' AND album_id = '{1}')".format(uid, album_id))
+	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
+
+### end of new stuff
+
+
+
+
+
+
+
 
 def getUsersPhotos(uid):
 	cursor = conn.cursor()
@@ -175,18 +356,24 @@ def allowed_file(filename):
 @app.route('/upload', methods=['GET', 'POST'])
 @flask_login.login_required
 def upload_file():
+	albums = view_albums() # this was also added for the else statement
 	if request.method == 'POST':
 		uid = getUserIdFromEmail(flask_login.current_user.id)
 		imgfile = request.files['photo']
 		caption = request.form.get('caption')
+
+
+		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
+		album_id = getAlbumId(album)
+
 		photo_data =imgfile.read()
 		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption) VALUES (%s, %s, %s )''', (photo_data, uid, caption))
+		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
 		conn.commit()
 		return render_template('hello.html', name=flask_login.current_user.id, message='Photo uploaded!', photos=getUsersPhotos(uid), base64=base64)
 	#The method is GET so we return a  HTML form to upload the a photo.
 	else:
-		return render_template('upload.html')
+		return render_template('upload.html', data=albums)
 #end photo uploading code
 
 
