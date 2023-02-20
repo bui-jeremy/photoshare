@@ -1,0 +1,21 @@
+<head>
+    <title>View friends list</title>
+</head>
+
+<h1>You are friends with:</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Friends</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+            <tr>
+                <td>{{ row }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+

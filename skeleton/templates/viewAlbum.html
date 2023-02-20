@@ -1,0 +1,17 @@
+<head>
+    <title>{{album_name}}</title>
+</head>
+
+<input type="submit" value="Edit album">
+
+
+
+{% if photos %}
+<h2>Here are your photos</h2>
+    <ul>
+    {% for photo in photos %}
+        <li>{{photo[2]}}<br>
+        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}'/></li>
+    {% endfor %}
+    </ul>
+{% endif %}

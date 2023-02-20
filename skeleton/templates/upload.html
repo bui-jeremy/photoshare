@@ -11,6 +11,16 @@
                 <input type="file" name="photo" required='true' /><br />
                 <label for="caption">Please caption:</label>
                 <input type="text" name="caption" required='true' /><br />
+
+
+                <label for="albums">Select album:</label>
+                <select name="album">
+                    {% for row in data %}
+                            <option>{{ row }}</option>
+                    {% endfor %}
+                </select><br />
+
+
                 <input type="submit" value="Upload" />
             </form>
     </body>

@@ -25,7 +25,17 @@
   <p> Go to <a href='/profile'>profile?</a></p>
 {% endif %}
 
+
+<form method="post" action="{{ url_for('add_friends') }}">
+  <label for="email">Search user:</label>
+  <input type="email" name="email" required="true" /><br />
+  <input type="submit" />
+</form>
+
+
 <ul>
+<li><a href='/friends'>View friends</a> </li>
+<li><a href='/album'>View albums</a> </li>
 <li><a href='/upload'>Upload a photo</a> </li>
 <li><a href='/logout'>Logout</a></li>
 <li><a href='/'>Home</a></li>
