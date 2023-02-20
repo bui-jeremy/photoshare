@@ -11,6 +11,7 @@
 
 import flask
 from flask import Flask, Response, request, render_template, redirect, url_for
+from flask import Flask, Response, request, render_template, redirect, url_for, session, flash
 from flaskext.mysql import MySQL
 import flask_login
 
@@ -138,6 +139,7 @@ def register_user():
 		return render_template('hello.html', name=email, message='Account Created!') 
 	else:
 		print("couldn't find all tokens")
+		flash("Email already in use! Use another one or login with the existing e-mail.")
 		return flask.redirect(flask.url_for('register'))
 
 
@@ -180,7 +182,7 @@ def add_friends():
 			return render_template('hello.html', message='already friends with this user')
 		print(cursor.execute("INSERT INTO Friends (super_user_id, sub_user_id) VALUES ('{0}', '{1}')".format(int(super), int(sub))))
 		conn.commit()
-		return render_template('hello.html', message='user exists, {0}. current user, {1}'.format(sub, super))
+		return render_template('hello.html', message='user {0} added as a friend'.format(email))
 	else:
 		#email does not exist in database
 		return render_template('hello.html', message='user does not exist')
