@@ -1,0 +1,30 @@
+<head>
+    <title>View albums</title>
+</head>
+
+<form method="post" action="{{ url_for('album_handler') }}">
+    <label for="album">View your albums:</label>
+    <select name="album">
+        {% for row in data %}
+                <option>{{ row }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" name="cmd" value="View"/>
+    <input type="submit" name="cmd" value="Delete"/><br/>
+
+</form>
+
+<form method="post" action="{{ url_for('create_album')}}">
+    <label for="album_name">Create album:</label>
+    <input type="text" name="album_name" required="true" /><br />
+    <input type="submit" name ="cmd" value="Create"/>
+</form>
+
+
+
+
+{% if message %}
+  <h4>{{message}}!</h4>
+{% endif %}
+
+<a href='/'>Home</a>
