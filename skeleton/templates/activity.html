@@ -1,0 +1,23 @@
+<head>
+    <title>Activity Leaderboard</title>
+</head>
+
+<table>
+    <thead>
+        <tr>
+            <h2>Top 3 Users Activity Leaderboard</h2>
+        </tr>
+    </thead>
+    <tbody>
+        <td><b>User's Email |  Contribution Count</b></td>
+        <br>
+          {% for row in data %}
+            <tr>
+                <td>{{ row }} | {{ data[row] }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+</table>
+
+<a href='/'>Home</a>

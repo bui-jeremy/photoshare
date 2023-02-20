@@ -24,7 +24,7 @@ app.secret_key = 'super secret string'  # Change this!
 
 #These will need to be changed according to your creditionals
 app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'mysql460'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'
 app.config['MYSQL_DATABASE_DB'] = 'photoshare'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
@@ -312,6 +312,19 @@ def getUsersPhotosFromAlbum(uid, album_id):
 	cursor = conn.cursor()
 	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE (user_id = '{0}' AND album_id = '{1}')".format(uid, album_id))
 	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
+
+### END OF ALBUM METHODS ###
+
+### ACTIVITY METHODS ### 
+@app.route("/activity", methods=['GET'])
+def activity():
+	cursor = conn.cursor()
+	# use COUNT to count unique user_ids and group them in desending order
+	cursor.execute("SELECT user_id, COUNT(*) as Posts FROM pictures GROUP BY user_id ORDER BY COUNT(*) DESC LIMIT 3")
+	activity_dict = {}
+	for i in cursor: 
+		activity_dict[getEmailFromUserId(i[0])] = i[1]
+	return render_template('activity.html', data=activity_dict)
 
 ### end of new stuff
 
