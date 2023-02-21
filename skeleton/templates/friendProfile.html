@@ -1,0 +1,25 @@
+<!doctype html>
+
+
+<title>Friend's Profile</title>
+{% if name %}
+  <h1>{{ name }}'s Profile:
+  </h1>
+{% endif %}
+
+{% if photos %}
+    <ul>
+    {% for photo in photos %}
+
+        <li>{{photo[2]}}<br>
+        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}'/></li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
+
+<ul>
+<li><a href='/activity'>Activity Leaderboard</a> </li>
+<li><a href='/logout'>Logout</a></li>
+<li><a href='/'>Home</a></li>
+</ul>

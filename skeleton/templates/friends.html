@@ -2,14 +2,26 @@
     <title>View friends list</title>
 </head>
 
-<h1>You are friends with:</h1>
+<h1>Friends' List: </h1>
 
+<form method="post" action="{{ url_for('friend_handler') }}">
+    <label for="friends">View a friend's profile:</label>
+    <select name="friends">
+        {% for row in data %}
+                <option>{{ row }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" name="cmd" value="View"/>
+</form>
+
+</form>
 <table>
     <thead>
         <tr>
             <th>Friends</th>
         </tr>
     </thead>
+  
     <tbody>
         {% for row in data %}
             <tr>
@@ -20,3 +32,4 @@
 </table>
 
 <a href='/'>Home</a>
+

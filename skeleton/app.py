@@ -124,13 +124,18 @@ def register_user():
 	try:
 		email=request.form.get('email')
 		password=request.form.get('password')
+		fname=request.form.get('fname')
+		lname=request.form.get('lname')
+		hometown=request.form.get('hometown')
+		dob=request.form.get('dob')
+		gender=request.form.get('gender')
 	except:
 		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
 		return flask.redirect(flask.url_for('register'))
 	cursor = conn.cursor()
 	test =  isEmailUnique(email)
 	if test:
-		print(cursor.execute("INSERT INTO Users (email, password) VALUES ('{0}', '{1}')".format(email, password)))
+		print(cursor.execute("INSERT INTO Users (fname, lname, email, password. hometown, dob, gender) VALUES ('{0}', '{1}')".format(fname, lname, email, password, hometown, dob, gender)))
 		conn.commit()
 		#log user in
 		user = User()
@@ -141,12 +146,6 @@ def register_user():
 		print("couldn't find all tokens")
 		flash("Email already in use! Use another one or login with the existing e-mail.")
 		return flask.redirect(flask.url_for('register'))
-
-
-
-
-
-
 
 
 
@@ -208,7 +207,6 @@ def friends():
 	for i in cursor:
 		fid = i[0]
 		friends.append(getEmailFromUserId(fid))
-
 	return render_template('friends.html', data=friends)
 
 #takes int of user id and returns email
@@ -216,6 +214,29 @@ def getEmailFromUserId(uid):
 	cursor = conn.cursor()
 	cursor.execute("SELECT email FROM Users WHERE user_id = '{0}'".format(uid))
 	return cursor.fetchone()[0]
+
+@app.route("/friends", methods=['POST', 'GET'])
+def friend_handler():
+	email = request.form.get('friends') 
+	return friend_profile(email)
+
+@app.route("/friendProfile")
+def friend_profile(email):
+	uid = getUserIdFromEmail(email)
+	name = getFullNameFromUserId(uid)
+	if (name == None):
+		name = email
+	return render_template('friendProfile.html', name=name, photos=getUsersPhotos(uid), base64=base64)
+
+def getUserIDFromEmail(email):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Users WHERE email ='{0}'".format(email))
+	return cursor.fetchone()[0]
+
+def getFullNameFromUserId(uid): 
+	cursor = conn.cursor() 
+	cursor.execute("SELECT first_name FROM Users WHERE user_id= '{0}'".format(uid))
+	return (cursor.fetchone()[0])
 
 
 ######## END FRIEND METHODS #########
@@ -246,8 +267,8 @@ def viewAlbumPage(album):
 	album_id = getAlbumId(album)
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	photos=getUsersPhotosFromAlbum(uid, album_id)
-
 	return render_template('viewAlbum.html', album_name=album, photos=photos, base64=base64)
+
 
 @app.route("/album")
 def delete_album(album):
@@ -312,7 +333,6 @@ def getUsersPhotosFromAlbum(uid, album_id):
 	cursor = conn.cursor()
 	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE (user_id = '{0}' AND album_id = '{1}')".format(uid, album_id))
 	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
-
 ### END OF ALBUM METHODS ###
 
 ### ACTIVITY METHODS ### 
@@ -327,11 +347,6 @@ def activity():
 	return render_template('activity.html', data=activity_dict)
 
 ### end of new stuff
-
-
-
-
-
 
 
 
