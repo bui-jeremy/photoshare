@@ -161,6 +161,7 @@ def register_user():
 
 # search for one particular user, adds to friends if user exists
 @app.route('/', methods=['POST'])
+@flask_login.login_required
 def add_friends():
 	try:
 		email=request.form.get('email')
@@ -217,7 +218,8 @@ def getEmailFromUserId(uid):
 
 @app.route("/friends", methods=['POST', 'GET'])
 def friend_handler():
-	email = request.form.get('friends') 
+	email = request.form.get('hidden') 
+	print(email)
 	return friend_profile(email)
 
 @app.route("/friendProfile")
@@ -407,6 +409,7 @@ def upload_file():
 
 #default page
 @app.route("/", methods=['GET'])
+@flask_login.login_required
 def hello():
 	return render_template('hello.html', message='Welecome to Photoshare')
 

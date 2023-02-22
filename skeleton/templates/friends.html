@@ -4,16 +4,6 @@
 
 <h1>Friends' List: </h1>
 
-<form method="post" action="{{ url_for('friend_handler') }}">
-    <label for="friends">View a friend's profile:</label>
-    <select name="friends">
-        {% for row in data %}
-                <option>{{ row }}</option>
-        {% endfor %}
-    </select>
-    <input type="submit" name="cmd" value="View"/>
-</form>
-
 </form>
 <table>
     <thead>
@@ -25,7 +15,8 @@
     <tbody>
         {% for row in data %}
             <tr>
-                <td>{{ row }}</td>
+                <td>{{ row }} <form method="post" action="{{ url_for('friend_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>  
+
             </tr>
         {% endfor %}
     </tbody>
