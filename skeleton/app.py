@@ -135,7 +135,7 @@ def register_user():
 	cursor = conn.cursor()
 	test =  isEmailUnique(email)
 	if test:
-		print(cursor.execute("INSERT INTO Users (fname, lname, email, password. hometown, dob, gender) VALUES ('{0}', '{1}')".format(fname, lname, email, password, hometown, dob, gender)))
+		print(cursor.execute("INSERT INTO Users (first_name, last_name, email, password, hometown, dob, gender) VALUES ('{0}', '{1}','{2}','{3}','{4}','{5}','{6}')".format(fname, lname, email, password, hometown, dob, gender)))
 		conn.commit()
 		#log user in
 		user = User()
@@ -219,13 +219,13 @@ def getEmailFromUserId(uid):
 @app.route("/friends", methods=['POST', 'GET'])
 def friend_handler():
 	email = request.form.get('hidden') 
-	print(email)
 	return friend_profile(email)
 
+# view friends' profile with buttons to view their photos
 @app.route("/friendProfile")
 def friend_profile(email):
 	uid = getUserIdFromEmail(email)
-	name = getFullNameFromUserId(uid)
+	name = getFirstNameFromUserId(uid)
 	if (name == None):
 		name = email
 	return render_template('friendProfile.html', name=name, photos=getUsersPhotos(uid), base64=base64)
@@ -235,7 +235,7 @@ def getUserIDFromEmail(email):
 	cursor.execute("SELECT user_id FROM Users WHERE email ='{0}'".format(email))
 	return cursor.fetchone()[0]
 
-def getFullNameFromUserId(uid): 
+def getFirstNameFromUserId(uid): 
 	cursor = conn.cursor() 
 	cursor.execute("SELECT first_name FROM Users WHERE user_id= '{0}'".format(uid))
 	return (cursor.fetchone()[0])
@@ -271,7 +271,6 @@ def viewAlbumPage(album):
 	photos=getUsersPhotosFromAlbum(uid, album_id)
 	return render_template('viewAlbum.html', album_name=album, photos=photos, base64=base64)
 
-
 @app.route("/album")
 def delete_album(album):
 	album_id = getAlbumId(album)
@@ -279,8 +278,6 @@ def delete_album(album):
 	print(cursor.execute("DELETE FROM Albums WHERE album_id = '{0}'".format(int(album_id))))
 	conn.commit()
 	return render_template('album.html', message="deleted", data=view_albums())
-
-
 
 from datetime import date # need to move this to the top, but i wanted to keep new stuff in one place for now
 
@@ -303,7 +300,6 @@ def create_album():
 		return render_template('album.html', message = 'album created', data=view_albums())
 	else:
 		return render_template('album.html', message='album under same name already exists', data=view_albums())
-
 
 def view_albums():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
@@ -346,7 +342,81 @@ def activity():
 	activity_dict = {}
 	for i in cursor: 
 		activity_dict[getEmailFromUserId(i[0])] = i[1]
-	return render_template('activity.html', data=activity_dict)
+	return render_template('activity.html', data=activity_dict, number='3')
+
+# adds buttons to view friends' profiles
+@app.route("/activity", methods=['POST', 'GET'])
+def activity_handler():
+	email = request.form.get('hidden') 
+	return friend_profile(email)
+
+### ACTIVITY ENDS ###
+
+### PICTURE METHODS ###
+@app.route("/viewAlbum", methods=['Post','GET'])
+def albumPicture_handler():
+	picture_id = request.form.get('hidden')
+	return picture(picture_id)
+
+@app.route("/picture")
+def picture(picture_id): 
+	photo = getPhotoFromPictureID(picture_id)
+	# styling to display email that posted picture
+	name = getNameFromPictureID(picture_id)
+	# load in comments of picture
+	comment = retrieve_comments(picture_id)
+	return render_template('picture.html', photo=photo, name = name, comment=comment, base64=base64)
+
+def getPhotoFromPictureID(picture_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
+	return cursor.fetchone()
+
+def getNameFromPictureID(picture_id):
+	userid = getUserIDFromPictureID(picture_id)
+	name = getFirstNameFromUserId(userid)
+	if (name == None):
+		name = getEmailFromUserId(userid)
+
+def getUserIDFromPictureID(picture_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
+	return cursor.fetchone()[0]
+
+### PICTURE METHODS END ###
+
+### COMMENT METHODS ###
+	
+@app.route("/picture", methods=['Post','GET'])
+def insert_comment():
+	# fields to update with comments
+	picture_id = request.form.get('hidden')
+	text = request.form.get('comment')
+	uid = getUserIDFromEmail(flask_login.current_user.id)
+	doc = date.today()
+
+	# insert into database
+	cursor = conn.cursor()
+	print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
+	conn.commit()
+
+	# retrieve original fields 
+	photo = getPhotoFromPictureID(picture_id)
+	name = getNameFromPictureID(picture_id)
+
+	# update new comments page
+	comment = retrieve_comments(picture_id)
+	return render_template('picture.html', photo=photo, name=name, comment=comment, base64=base64)
+
+@app.route("/picture", methods=['GET'])
+def retrieve_comments(picture_id):
+	picture_id = picture_id
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id, text_comment FROM Comments WHERE picture_id = '{0}'".format(picture_id))
+	comment_dict = {}
+	for i in cursor: 
+		comment_dict[i[1]] = getEmailFromUserId(i[0])
+	return comment_dict
 
 ### end of new stuff
 
@@ -411,7 +481,7 @@ def upload_file():
 @app.route("/", methods=['GET'])
 @flask_login.login_required
 def hello():
-	return render_template('hello.html', message='Welecome to Photoshare')
+	return render_template('hello.html', message='Welcome to Photoshare')
 
 
 if __name__ == "__main__":
