@@ -2,8 +2,6 @@
     <title>{{album_name}}</title>
 </head>
 
-<input type="submit" value="Edit album">
-
 
 
 {% if photos %}
@@ -11,7 +9,14 @@
     <ul>
     {% for photo in photos %}
         <li>{{photo[2]}}<br>
-        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}'/></li>
+            <form method="post" action="{{ url_for('albumPicture_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ photo[1] }}"  style="display: inline;"/>
+                <button type="submit" value="hidden">
+                    <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width = "110" height = "110"/>
+                </button>
+            </form>
+        </li>
     {% endfor %}
     </ul>
 {% endif %}
+
+<a href='/'>Home</a>

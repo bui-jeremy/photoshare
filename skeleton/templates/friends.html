@@ -2,20 +2,25 @@
     <title>View friends list</title>
 </head>
 
-<h1>You are friends with:</h1>
+<h1>Friends' List: </h1>
 
+</form>
 <table>
     <thead>
         <tr>
             <th>Friends</th>
         </tr>
     </thead>
+  
     <tbody>
         {% for row in data %}
             <tr>
-                <td>{{ row }}</td>
+                <td>{{ row }} <form method="post" action="{{ url_for('friend_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>  
+
             </tr>
         {% endfor %}
     </tbody>
 </table>
+
+<a href='/'>Home</a>
 

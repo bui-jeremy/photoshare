@@ -1,0 +1,28 @@
+<head>
+    <title>Activity Leaderboard</title>
+</head>
+
+<table>
+    <thead>
+        <tr>
+            {% if number %}
+                <h2>
+                    Top {{ number }} Contributors: 
+                </h2>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>   
+        <br>
+        <td><b>User's Email |  Contribution Count</b></td>
+        <br>
+          {% for row in data %}
+            <tr>
+                <td>{{ row }} | {{ data[row] }}  <form method="post" action="{{ url_for('activity_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+</table>
+
+<a href='/'>Home</a>

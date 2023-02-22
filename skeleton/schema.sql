@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS photoshare;
 USE photoshare;
 
-CREATE TABLE Users (
+CREATE TABLE IF NOT EXISTS Users (
     user_id int4 AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE,
     password varchar(255),
@@ -14,7 +14,7 @@ CREATE TABLE Users (
 );
 
 
-CREATE TABLE Albums( 
+CREATE TABLE IF NOT EXISTS Albums( 
 	album_id int4 AUTO_INCREMENT, 
     owner_id int4,
     album_name VARCHAR(255),
@@ -24,7 +24,7 @@ CREATE TABLE Albums(
 
 );
 
-CREATE TABLE Pictures
+CREATE TABLE IF NOT EXISTS Pictures
 (
   picture_id int4  AUTO_INCREMENT,
   user_id int4,
@@ -38,8 +38,8 @@ CREATE TABLE Pictures
   CONSTRAINT num_likes_check CHECK (num_likes >= 0)
 );
 
-CREATE TABLE Comments(
-	comment_id int4,
+CREATE TABLE IF NOT EXISTS Comments(
+	comment_id int4 AUTO_INCREMENT,
     picture_id int4,
     user_id int4, 
     text_comment VARCHAR(255), 
@@ -48,13 +48,13 @@ CREATE TABLE Comments(
 	FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id) ON DELETE CASCADE
 );
 
-CREATE TABLE Tags(
+CREATE TABLE IF NOT EXISTS Tags(
 	tag_id int4,
     tag_description VARCHAR(255),
     CONSTRAINT tags_pk PRIMARY KEY (tag_id)
 );
 
-CREATE TABLE Photo_contain(
+CREATE TABLE IF NOT EXISTS Photo_contain(
 	picture_id int4,
 	tag_id int4, 
     PRIMARY KEY (picture_id, tag_id),
@@ -62,7 +62,7 @@ CREATE TABLE Photo_contain(
     FOREIGN KEY (tag_id) REFERENCES Tags(tag_id)
 );
 
-CREATE TABLE Liked_by(
+CREATE TABLE IF NOT EXISTS Liked_by(
 	user_id int4,
     picture_id int4,
     PRIMARY KEY (user_id, picture_id),
@@ -70,7 +70,7 @@ CREATE TABLE Liked_by(
     FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id)
 );
 
-CREATE TABLE Friends(
+CREATE TABLE IF NOT EXISTS Friends(
 	super_user_id int4,
     sub_user_id int4,
     PRIMARY KEY (super_user_id, sub_user_id),
