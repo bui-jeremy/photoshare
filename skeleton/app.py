@@ -224,7 +224,7 @@ def getMaxTagID():
 @app.route('/pictures', methods=['GET'])
 def retrieve_tags(picture_id):
 	cursor = conn.cursor()
-	cursor.execute("SELECT tag_description FROM tags WHERE tag_id = (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
+	cursor.execute("SELECT tag_description FROM tags WHERE tag_id IN (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
 	return cursor.fetchall()
 #end photo uploading code
 
@@ -250,18 +250,40 @@ if __name__ == "__main__":
 # 	still need to make changes so friend search only appears when user is logged in
 #	friend is added immediately upon finding them and hitting submit button
 
-
-
-# search for one particular user, adds to friends if user exists
-@app.route('/', methods=['POST'])
-@flask_login.login_required
-def add_friends():
-	try:
-		email=request.form.get('email')
-
+@app.route('/', methods=['GET','POST'])
+def hello_friend_handler():
+	try: 
+		cmd = request.form.get('cmd')
+		email = request.form.get('email')
+		temp_email = request.form.get('hidden')
 	except:
-		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
-		return flask.redirect(flask.url_for('friends'))
+		print("couldn't find all tokens")
+		return flask.redirect(flask.url_for('hello'))
+	if cmd == 'Search':
+		return search_friends(email)
+	elif cmd == 'Add Friend':
+		return add_friends(temp_email)
+	else:
+		return friend_profile(temp_email)
+
+@app.route('/')
+def search_friends(email):
+	
+	test = isEmailUnique(email)
+	if test:
+		return render_template('hello.html', message='user does not exist')
+	else: 
+		super = getUserIdFromEmail(flask_login.current_user.id)
+		sub = getUserIdFromEmail(email)
+		if super == sub: # checks if searching for themselves
+			return render_template('hello.html', message='cannot search for yourself')
+		else: 
+			return render_template('hello.html', message='user exists', show_add_view_btns = email)
+		
+# search for one particular user, adds to friends if user exists
+@app.route('/')
+@flask_login.login_required
+def add_friends(email):
 	cursor = conn.cursor()
 	test =  isEmailUnique(email)
 
@@ -293,6 +315,7 @@ def alreadyFriends(super, sub):
 
 # adds friends to array to be printed in html table
 @app.route("/friends", methods=['GET'])
+@flask_login.login_required
 def friends():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	cursor = conn.cursor()
@@ -344,11 +367,13 @@ def getNameFromUserId(uid):
 ######## ALBUM METHODS ###########
 
 @app.route("/album", methods=['GET'])
+@flask_login.login_required
 def album():
 	albums = view_albums()
 	return render_template('album.html', data=albums)
 
 @app.route("/album", methods=['POST', 'GET'])
+@flask_login.login_required
 def album_handler():
 	cmd = request.form.get("cmd")
 	album = request.form.get('album') 

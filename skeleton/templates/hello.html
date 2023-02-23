@@ -25,13 +25,20 @@
   <p> Go to <a href='/profile'>profile?</a></p>
 {% endif %}
 
-
-<form method="post" action="{{ url_for('add_friends') }}">
+<form method="post" action="{{ url_for('hello_friend_handler') }}">
   <label for="email">Search user:</label>
   <input type="email" name="email" required="true" /><br />
-  <input type="submit" />
+  <input type="submit" name = "cmd" value = "Search" />
 </form>
 
+<form method = "post" action = "{{ url_for('hello_friend_handler') }}">
+  {% if show_add_view_btns %}
+  <p>{{ show_add_view_btns }} </p>
+  <input type="hidden" name="hidden" value="{{ show_add_view_btns }}">
+  <input type="submit" name = "cmd" value = "Add Friend" />
+  <input type="submit" name = "cmd" value = "View Profile" />
+  {% endif %}
+</form>
 
 <ul>
 <li><a href='/friends'>View friends</a> </li>
