@@ -14,11 +14,11 @@
     </thead>
     <tbody>   
         <br>
-        <td><b>User's Email |  Contribution Count</b></td>
+        <td><b>User's Email |  Contribution Score (Posts + Comments) </b></td>
         <br>
           {% for row in data %}
             <tr>
-                <td>{{ row }} | {{ data[row] }}  <form method="post" action="{{ url_for('activity_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>
+                <td>{{ row }} | {{ data[row] }}  | <form method="post" action="{{ url_for('activity_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>
             </tr>
         {% endfor %}
     </tbody>
