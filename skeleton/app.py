@@ -147,6 +147,99 @@ def register_user():
 		flash("Email already in use! Use another one or login with the existing e-mail.")
 		return flask.redirect(flask.url_for('register'))
 
+def getUsersPhotos(uid):
+	cursor = conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE user_id = '{0}'".format(uid))
+	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
+
+def getUserIdFromEmail(email):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
+	return cursor.fetchone()[0]
+
+def isEmailUnique(email):
+	#use this to check if a email has already been registered
+	cursor = conn.cursor()
+	if cursor.execute("SELECT email  FROM Users WHERE email = '{0}'".format(email)):
+		#this means there are greater than zero entries with that email
+		return False
+	else:
+		return True
+#end login code
+
+@app.route('/profile')
+@flask_login.login_required
+def protected():
+	return render_template('hello.html', name=flask_login.current_user.id, message="Here's your profile")
+
+#begin photo uploading code
+# photos uploaded using base64 encoding so they can be directly embeded in HTML
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+def allowed_file(filename):
+	return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+@flask_login.login_required
+def upload_file():
+	albums = view_albums() # this was also added for the else statement
+	if request.method == 'POST':
+		uid = getUserIdFromEmail(flask_login.current_user.id)
+		imgfile = request.files['photo']
+		caption = request.form.get('caption')
+		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
+		album_id = getAlbumId(album)
+		
+		photo_data =imgfile.read()
+		cursor = conn.cursor()
+		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
+		conn.commit()
+
+		# incoporate tags 
+		tags = request.form.get('tags')
+		if (tags != None):
+			tags = tags.split(',')
+			for i in tags: 
+				cursor.execute("INSERT INTO Tags (tag_description) VALUES ('{0}')".format(i))
+				conn.commit()
+				cursor.execute("INSERT INTO Photo_contain (tag_id, picture_id) VALUES ('{0}', '{1}')".format(getMaxTagID(), getMaxPictureId()))
+				conn.commit()
+
+		return render_template('hello.html', name=flask_login.current_user.id, message='Photo uploaded!', photos=getUsersPhotos(uid), base64=base64)
+	#The method is GET so we return a  HTML form to upload the a photo.
+	else:
+		return render_template('upload.html', data=albums)
+	
+# used to return most recently created picture id
+def getMaxPictureId():
+	cursor = conn.cursor()
+	cursor.execute("SELECT MAX(picture_id) FROM Pictures")
+	return cursor.fetchone()[0]
+
+# used to return most recently created tag id
+def getMaxTagID():
+	cursor = conn.cursor()
+	cursor.execute("SELECT MAX(tag_id) FROM Tags")
+	return cursor.fetchone()[0]
+
+@app.route('/pictures', methods=['GET'])
+def retrieve_tags(picture_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT tag_description FROM tags WHERE tag_id = (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
+	return cursor.fetchall()
+#end photo uploading code
+
+
+#default page
+@app.route("/", methods=['GET'])
+@flask_login.login_required
+def hello():
+	return render_template('hello.html', message='Welcome to Photoshare')
+
+
+if __name__ == "__main__":
+	#this is invoked when in the shell  you run
+	#$ python app.py
+	app.run(port=5000, debug=True)
 
 
 ### new stuff:
@@ -225,7 +318,7 @@ def friend_handler():
 @app.route("/friendProfile")
 def friend_profile(email):
 	uid = getUserIdFromEmail(email)
-	name = getFirstNameFromUserId(uid)
+	name = getNameFromUserId(uid)
 	if (name == None):
 		name = email
 	return render_template('friendProfile.html', name=name, photos=getUsersPhotos(uid), base64=base64)
@@ -235,10 +328,13 @@ def getUserIDFromEmail(email):
 	cursor.execute("SELECT user_id FROM Users WHERE email ='{0}'".format(email))
 	return cursor.fetchone()[0]
 
-def getFirstNameFromUserId(uid): 
+def getNameFromUserId(uid): 
 	cursor = conn.cursor() 
-	cursor.execute("SELECT first_name FROM Users WHERE user_id= '{0}'".format(uid))
-	return (cursor.fetchone()[0])
+	cursor.execute("SELECT first_name, last_name FROM Users WHERE user_id= '{0}'".format(uid))
+	fname = cursor.fetchone()[0]
+	cursor.execute("SELECT last_name, last_name FROM Users WHERE user_id= '{0}'".format(uid))
+	lname = cursor.fetchone()[0]
+	return fname + " " + lname
 
 
 ######## END FRIEND METHODS #########
@@ -337,18 +433,23 @@ def getUsersPhotosFromAlbum(uid, album_id):
 @app.route("/activity", methods=['GET'])
 def activity():
 	cursor = conn.cursor()
-	# use COUNT to count unique user_ids and group them in desending order
-	cursor.execute("SELECT user_id, COUNT(*) as Posts FROM pictures GROUP BY user_id ORDER BY COUNT(*) DESC LIMIT 3")
+	cursor.execute("SELECT user_id, SUM(posts_or_comments) as Total FROM (SELECT user_id, COUNT(*) as posts_or_comments FROM pictures GROUP BY user_id UNION ALL SELECT user_id, COUNT(*) as posts_or_comments FROM comments GROUP BY user_id) as combinted_table GROUP BY user_id ORDER BY Total DESC LIMIT 3")
 	activity_dict = {}
-	for i in cursor: 
-		activity_dict[getEmailFromUserId(i[0])] = i[1]
+	for i in cursor:
+		activity_dict[getEmailFromUserId(i[0])] = i[1] 
 	return render_template('activity.html', data=activity_dict, number='3')
+
 
 # adds buttons to view friends' profiles
 @app.route("/activity", methods=['POST', 'GET'])
 def activity_handler():
 	email = request.form.get('hidden') 
 	return friend_profile(email)
+
+@app.route("/friendProfile", methods=['Post','GET'])
+def friendProfilePicture_handler():
+	picture_id = request.form.get('hidden')
+	return picture(picture_id)
 
 ### ACTIVITY ENDS ###
 
@@ -365,7 +466,9 @@ def picture(picture_id):
 	name = getNameFromPictureID(picture_id)
 	# load in comments of picture
 	comment = retrieve_comments(picture_id)
-	return render_template('picture.html', photo=photo, name = name, comment=comment, base64=base64)
+	# load in tags
+	tags = retrieve_tags(picture_id)
+	return render_template('picture.html', photo=photo, name = name, comment=comment, tags=tags, base64=base64)
 
 def getPhotoFromPictureID(picture_id):
 	cursor = conn.cursor()
@@ -374,9 +477,10 @@ def getPhotoFromPictureID(picture_id):
 
 def getNameFromPictureID(picture_id):
 	userid = getUserIDFromPictureID(picture_id)
-	name = getFirstNameFromUserId(userid)
+	name = getNameFromUserId(userid)
 	if (name == None):
 		name = getEmailFromUserId(userid)
+	return name
 
 def getUserIDFromPictureID(picture_id):
 	cursor = conn.cursor()
@@ -395,17 +499,23 @@ def insert_comment():
 	uid = getUserIDFromEmail(flask_login.current_user.id)
 	doc = date.today()
 
-	# insert into database
-	cursor = conn.cursor()
-	print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
-	conn.commit()
-
-	# retrieve original fields 
 	photo = getPhotoFromPictureID(picture_id)
 	name = getNameFromPictureID(picture_id)
 
 	# update new comments page
 	comment = retrieve_comments(picture_id)
+
+	# check if user is trying to comment on their own picture
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
+	owner_id = cursor.fetchone()[0]
+	if (owner_id == uid): 
+		return render_template('picture.html', err_message='You cannot comment on your own picture.', photo=photo, name=name, comment=comment, base64=base64)
+	# retrieve original fields 
+
+	# insert into database if the passes conditional
+	print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
+	conn.commit()
 	return render_template('picture.html', photo=photo, name=name, comment=comment, base64=base64)
 
 @app.route("/picture", methods=['GET'])
@@ -418,73 +528,7 @@ def retrieve_comments(picture_id):
 		comment_dict[i[1]] = getEmailFromUserId(i[0])
 	return comment_dict
 
+### COMMENT METHODS END ###
+
+
 ### end of new stuff
-
-
-
-def getUsersPhotos(uid):
-	cursor = conn.cursor()
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE user_id = '{0}'".format(uid))
-	return cursor.fetchall() #NOTE return a list of tuples, [(imgdata, pid, caption), ...]
-
-def getUserIdFromEmail(email):
-	cursor = conn.cursor()
-	cursor.execute("SELECT user_id  FROM Users WHERE email = '{0}'".format(email))
-	return cursor.fetchone()[0]
-
-def isEmailUnique(email):
-	#use this to check if a email has already been registered
-	cursor = conn.cursor()
-	if cursor.execute("SELECT email  FROM Users WHERE email = '{0}'".format(email)):
-		#this means there are greater than zero entries with that email
-		return False
-	else:
-		return True
-#end login code
-
-@app.route('/profile')
-@flask_login.login_required
-def protected():
-	return render_template('hello.html', name=flask_login.current_user.id, message="Here's your profile")
-
-#begin photo uploading code
-# photos uploaded using base64 encoding so they can be directly embeded in HTML
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
-def allowed_file(filename):
-	return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
-
-@app.route('/upload', methods=['GET', 'POST'])
-@flask_login.login_required
-def upload_file():
-	albums = view_albums() # this was also added for the else statement
-	if request.method == 'POST':
-		uid = getUserIdFromEmail(flask_login.current_user.id)
-		imgfile = request.files['photo']
-		caption = request.form.get('caption')
-
-
-		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
-		album_id = getAlbumId(album)
-
-		photo_data =imgfile.read()
-		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
-		conn.commit()
-		return render_template('hello.html', name=flask_login.current_user.id, message='Photo uploaded!', photos=getUsersPhotos(uid), base64=base64)
-	#The method is GET so we return a  HTML form to upload the a photo.
-	else:
-		return render_template('upload.html', data=albums)
-#end photo uploading code
-
-
-#default page
-@app.route("/", methods=['GET'])
-@flask_login.login_required
-def hello():
-	return render_template('hello.html', message='Welcome to Photoshare')
-
-
-if __name__ == "__main__":
-	#this is invoked when in the shell  you run
-	#$ python app.py
-	app.run(port=5000, debug=True)

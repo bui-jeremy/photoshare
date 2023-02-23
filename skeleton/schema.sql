@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS Comments(
 );
 
 CREATE TABLE IF NOT EXISTS Tags(
-	tag_id int4,
+	tag_id int4 AUTO_INCREMENT,
     tag_description VARCHAR(255),
     CONSTRAINT tags_pk PRIMARY KEY (tag_id)
 );
