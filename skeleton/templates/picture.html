@@ -2,13 +2,11 @@
     <title>Individual Picture</title>
 </head>
 
-
+<input type="submit" name="cmd" value="Delete Photo"/>
 
 <h2>{% if name %} {{ name }} {% endif %}'s caption: {{photo[2]}}</h2>
     <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt= "{{photo[2]}} picture" width = 400vh height = 300vh/><br>
     <br>
-
-
 
     <form method="post" action="{{ url_for('picture_handler') }}">
         <h3>{{ num_likes }} Likes</h3>
@@ -32,8 +30,6 @@
             {% endfor %}
         </tbody>
     </table>
-
-
 
 {% if err_message %}
     <p style="color:red">{{ err_message }}</p>
