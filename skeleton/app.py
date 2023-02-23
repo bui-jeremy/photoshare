@@ -302,7 +302,8 @@ def friends():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	friends = get_friends(uid)
 	recommended = friends_of_friends()
-	return render_template('friends.html', data=friends, rec=recommended)
+	requested = added_by()
+	return render_template('friends.html', data=friends, recommended=recommended, requested=requested)
 
 def get_friends(uid):
 	cursor = conn.cursor()
@@ -368,6 +369,18 @@ def friends_of_friends():
 			if count == 10: #recommend at most 10 friends of friends, depending on how many friends user has
 				break
 	return mutual_friends
+
+def added_by():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor() 
+	cursor.execute("SELECT super_user_id FROM Friends WHERE sub_user_id= '{0}'".format(uid))
+	added = []
+	for i in cursor:
+		fid = i[0]
+		if not alreadyFriends(uid, fid):
+			added.append(getEmailFromUserId(fid))
+	return added
+
 
 ######## END FRIEND METHODS #########
 	
