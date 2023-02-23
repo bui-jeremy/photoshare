@@ -24,7 +24,7 @@ app.secret_key = 'super secret string'  # Change this!
 
 #These will need to be changed according to your creditionals
 app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'mysql460'
 app.config['MYSQL_DATABASE_DB'] = 'photoshare'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
@@ -196,7 +196,7 @@ def upload_file():
 
 		# incoporate tags 
 		tags = request.form.get('tags')
-		if (tags != None):
+		if (tags != ""):
 			tags = tags.split(',')
 			for i in tags: 
 				cursor.execute("INSERT INTO Tags (tag_description) VALUES ('{0}')".format(i))
@@ -224,8 +224,13 @@ def getMaxTagID():
 @app.route('/pictures', methods=['GET'])
 def retrieve_tags(picture_id):
 	cursor = conn.cursor()
-	cursor.execute("SELECT tag_description FROM tags WHERE tag_id IN (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
-	return cursor.fetchall()
+	cursor.execute("SELECT tag_description FROM Tags WHERE tag_id IN (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
+	tags = []
+	for i in cursor:
+		tag = i[0]
+		tags.append(tag)
+	
+	return tags
 #end photo uploading code
 
 
@@ -493,7 +498,9 @@ def picture(picture_id):
 	comment = retrieve_comments(picture_id)
 	# load in tags
 	tags = retrieve_tags(picture_id)
-	return render_template('picture.html', photo=photo, name = name, comment=comment, tags=tags, base64=base64)
+	# load in likes and users
+	num_likes, users_liked = count_likes(picture_id)
+	return render_template('picture.html', photo=photo, name = name, comment=comment, num_likes=num_likes, users_liked=users_liked, tags=tags, base64=base64)
 
 def getPhotoFromPictureID(picture_id):
 	cursor = conn.cursor()
@@ -516,7 +523,7 @@ def getUserIDFromPictureID(picture_id):
 
 ### COMMENT METHODS ###
 	
-@app.route("/picture", methods=['Post','GET'])
+@app.route("/picture")
 def insert_comment():
 	# fields to update with comments
 	picture_id = request.form.get('hidden')
@@ -526,6 +533,8 @@ def insert_comment():
 
 	photo = getPhotoFromPictureID(picture_id)
 	name = getNameFromPictureID(picture_id)
+	tags = retrieve_tags(picture_id)
+	num_likes, users_liked =count_likes(picture_id)
 
 	# update new comments page
 	comment = retrieve_comments(picture_id)
@@ -535,13 +544,13 @@ def insert_comment():
 	cursor.execute("SELECT user_id FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
 	owner_id = cursor.fetchone()[0]
 	if (owner_id == uid): 
-		return render_template('picture.html', err_message='You cannot comment on your own picture.', photo=photo, name=name, comment=comment, base64=base64)
+		return render_template('picture.html', err_message='You cannot comment on your own picture.', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	# retrieve original fields 
 
 	# insert into database if the passes conditional
 	print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
 	conn.commit()
-	return render_template('picture.html', photo=photo, name=name, comment=comment, base64=base64)
+	return render_template('picture.html', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 
 @app.route("/picture", methods=['GET'])
 def retrieve_comments(picture_id):
@@ -555,5 +564,50 @@ def retrieve_comments(picture_id):
 
 ### COMMENT METHODS END ###
 
+### LIKE METHODS ###
+
+def count_likes(picture_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT user_id FROM Liked_by WHERE picture_id = '{0}'".format(picture_id))
+	conn.commit()
+	users_liked = []
+	num_likes = 0
+	for i in cursor:
+		fid = i[0]
+		users_liked.append(getEmailFromUserId(fid))
+		num_likes += 1
+	return (num_likes, users_liked)
+
+@app.route("/picture")
+def like_photo():
+	picture_id = request.form.get('hidden')
+	uid = getUserIDFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor()
+	if already_liked(picture_id, uid): 
+		photo = getPhotoFromPictureID(picture_id)
+		name = getNameFromPictureID(picture_id)
+		num_likes, users_liked =count_likes(picture_id)
+		comment = retrieve_comments(picture_id)
+		tags = retrieve_tags(picture_id)
+		return render_template('picture.html', err_message='Already Liked!', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
+	cursor.execute("INSERT INTO Liked_by (user_id, picture_id) VALUES ('{0}', '{1}')".format(uid, picture_id))
+	conn.commit()
+	return picture(picture_id)
+
+def already_liked(picture_id, uid):
+	cursor = conn.cursor()
+	if cursor.execute("SELECT picture_id  FROM Liked_by WHERE (picture_id = '{0}' AND user_id = '{1}')".format(picture_id, uid)):
+		#this means there are greater than zero entries with that album name for this user
+		return True
+	else:
+		return False
+	
+@app.route("/picture", methods=['POST', 'GET'])
+def picture_handler():
+	cmd = request.form.get("cmd")
+	if cmd == "Like":
+		return like_photo()
+	else: # hit button to submit comment
+	 	return insert_comment()
 
 ### end of new stuff
