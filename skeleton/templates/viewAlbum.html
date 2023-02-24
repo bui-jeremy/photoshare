@@ -2,7 +2,9 @@
     <title>{{album_name}}</title>
 </head>
 
-
+{% if message %}
+  <h4>{{message}}</h4>
+{% endif %}
 
 {% if photos %}
 <h2>Here are your photos</h2>

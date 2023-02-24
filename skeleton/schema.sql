@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS Photo_contain(
 	picture_id int4,
 	tag_id int4, 
     PRIMARY KEY (picture_id, tag_id),
-    FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id),
+    FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES Tags(tag_id)
 );
 
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS Liked_by(
     picture_id int4,
     PRIMARY KEY (user_id, picture_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id)
+    FOREIGN KEY (picture_id) REFERENCES Pictures(picture_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS Friends(

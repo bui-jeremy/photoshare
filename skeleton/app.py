@@ -362,7 +362,7 @@ def friends_of_friends():
 			for j in cursor: # nested loop checks for duplicates, at worst case would run 9 times (through users who have already been added)
 				mfid = j[0] # friend of friend's id
 				user = getEmailFromUserId(mfid)
-				if (user != email) and (user not in mutual_friends):
+				if (user != email) and (user not in friends) and (user not in mutual_friends):
 					mutual_friends.append(user)
 					break
 			count+=1
@@ -397,7 +397,7 @@ def album_handler():
 	cmd = request.form.get("cmd")
 	album = request.form.get('album') 
 	if cmd == "View":
-		return viewAlbumPage(album)
+		return viewAlbumPage(album, "")
 	elif cmd == "Delete":
 		return delete_album(album)
 	else:
@@ -405,11 +405,11 @@ def album_handler():
 
 
 @app.route("/viewAlbum")
-def viewAlbumPage(album):
+def viewAlbumPage(album, message):
 	album_id = getAlbumId(album)
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	photos=getUsersPhotosFromAlbum(uid, album_id)
-	return render_template('viewAlbum.html', album_name=album, photos=photos, base64=base64)
+	return render_template('viewAlbum.html', album_name=album, message=message, photos=photos, base64=base64)
 
 @app.route("/album")
 def delete_album(album):
@@ -514,7 +514,8 @@ def picture(picture_id):
 	tags = retrieve_tags(picture_id)
 	# load in likes and users
 	num_likes, users_liked = count_likes(picture_id)
-	return render_template('picture.html', photo=photo, name = name, comment=comment, num_likes=num_likes, users_liked=users_liked, tags=tags, base64=base64)
+	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
+	return render_template('picture.html', photo=photo, name = name, comment=comment, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
 
 def getPhotoFromPictureID(picture_id):
 	cursor = conn.cursor()
@@ -533,6 +534,26 @@ def getUserIDFromPictureID(picture_id):
 	cursor.execute("SELECT user_id FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
 	return cursor.fetchone()[0]
 
+@app.route("/picture")
+def delete_photo():
+	picture_id = request.form.get('hidden')
+	album_id = getAlbumIDFromPhotoID(picture_id)
+	album = getAlbumNameFromAlbumID(album_id)
+	cursor = conn.cursor()
+	print(cursor.execute("DELETE FROM Pictures WHERE picture_id = '{0}'".format(int(picture_id))))
+	conn.commit()
+	return viewAlbumPage(album, "Photo deleted!")
+
+def getAlbumIDFromPhotoID(picture_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT album_id FROM Pictures WHERE picture_id = '{0}'".format(int(picture_id)))
+	return cursor.fetchone()[0]
+
+def getAlbumNameFromAlbumID(album_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT album_name FROM Albums WHERE album_id = '{0}'".format(int(album_id)))
+	return cursor.fetchone()[0]
+
 ### PICTURE METHODS END ###
 
 ### COMMENT METHODS ###
@@ -549,6 +570,7 @@ def insert_comment():
 	name = getNameFromPictureID(picture_id)
 	tags = retrieve_tags(picture_id)
 	num_likes, users_liked =count_likes(picture_id)
+	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
 
 	# check if user is trying to comment on their own picture
 	cursor = conn.cursor()
@@ -556,7 +578,7 @@ def insert_comment():
 	owner_id = cursor.fetchone()[0]
 	if (owner_id == uid): 
 		comment = retrieve_comments(picture_id)
-		return render_template('picture.html', err_message='You cannot comment on your own picture.', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
+		return render_template('picture.html', err_message='You cannot comment on your own picture.', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	# retrieve original fields 
 
 	# insert into database if the passes conditional
@@ -565,7 +587,7 @@ def insert_comment():
 	# update new comments page
 	comment = retrieve_comments(picture_id)
 
-	return render_template('picture.html', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
+	return render_template('picture.html', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 
 @app.route("/picture", methods=['GET'])
 def retrieve_comments(picture_id):
@@ -604,7 +626,8 @@ def like_photo():
 		num_likes, users_liked =count_likes(picture_id)
 		comment = retrieve_comments(picture_id)
 		tags = retrieve_tags(picture_id)
-		return render_template('picture.html', err_message='Already Liked!', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
+		owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
+		return render_template('picture.html', err_message='Already Liked!', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	cursor.execute("INSERT INTO Liked_by (user_id, picture_id) VALUES ('{0}', '{1}')".format(uid, picture_id))
 	conn.commit()
 	return picture(picture_id)
@@ -622,6 +645,8 @@ def picture_handler():
 	cmd = request.form.get("cmd")
 	if cmd == "Like":
 		return like_photo()
+	elif cmd == "Delete Photo":
+		return delete_photo()
 	else: # hit button to submit comment
 	 	return insert_comment()
 
