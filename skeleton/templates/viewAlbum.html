@@ -1,22 +1,44 @@
 <head>
     <title>{{album_name}}</title>
+    <style>
+        ul {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 10px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
 </head>
 
-
-
 {% if photos %}
-<h2>Here are your photos</h2>
+    <h2>Here are your photos</h2>
     <ul>
-    {% for photo in photos %}
-        <li>{{photo[2]}}<br>
-            <form method="post" action="{{ url_for('albumPicture_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ photo[1] }}"  style="display: inline;"/>
-                <button type="submit" value="hidden">
-                    <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width = "110" height = "110"/>
-                </button>
-            </form>
-        </li>
-    {% endfor %}
+        {% for photo in photos %}
+            <li>
+                {{photo[2]}}
+                <form method="post" action="{{ url_for('albumPicture_handler') }}">
+                    <input type="hidden" name="hidden" value="{{ photo[1] }}" />
+                    <button type="submit" value="hidden">
+                        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
+                    </button>
+                </form>
+            </li>
+        {% endfor %}
     </ul>
 {% endif %}
+
 
 <a href='/'>Home</a>
