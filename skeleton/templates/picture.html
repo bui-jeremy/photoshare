@@ -36,13 +36,6 @@
   </style>
 </head>
 
-{% if owner %}
-    <form method="post" action="{{ url_for('picture_handler') }}">
-        <input type="hidden" name="hidden"  value="{{ photo[1] }}" />
-        <input type="submit" name="cmd" value="Delete Photo"/>
-    </form>
-{% endif %}
-
 <nav>
     <ul>
         <li><a href='/'>Home</a></li>
@@ -54,6 +47,12 @@
     </ul>
   </nav>
   
+{% if owner %}
+  <form method="post" action="{{ url_for('picture_handler') }}">
+      <input type="hidden" name="hidden"  value="{{ photo[1] }}" />
+      <input type="submit" name="cmd" value="Delete Photo"/>
+  </form>
+{% endif %}
 
 <h2>{% if name %} {{ name }} {% endif %}'s caption: {{photo[2]}}</h2>
     <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt= "{{photo[2]}} picture" width = 400vh height = 300vh/><br>
