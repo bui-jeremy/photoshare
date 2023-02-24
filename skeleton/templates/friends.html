@@ -66,5 +66,39 @@
     </tbody>
 </table>
 
+<table>
+    <thead>
+        <tr>
+            <th>Users who've added you</th>
+        </tr>
+    </thead>
+  
+    <tbody>
+        {% for row in requested %}
+            <tr>
+                <td>{{ row }} <form method="post" action="{{ url_for('friend_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>  
+
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<table>
+    <thead>
+        <tr>
+            <th>Recommended Users</th>
+        </tr>
+    </thead>
+  
+    <tbody>
+        {% for row in recommended %}
+            <tr>
+                <td>{{ row }} <form method="post" action="{{ url_for('friend_handler') }}" style="display: inline;"> <input type="hidden" name="hidden"  value="{{ row }}"  style="display: inline;"/><input type="submit" value="View Profile" style="display: inline;"/></form></td>  
+
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 <a href='/'>Home</a>
 

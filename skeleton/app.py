@@ -323,13 +323,19 @@ def alreadyFriends(super, sub):
 @flask_login.login_required
 def friends():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
+	friends = get_friends(uid)
+	recommended = friends_of_friends()
+	requested = added_by()
+	return render_template('friends.html', data=friends, recommended=recommended, requested=requested)
+
+def get_friends(uid):
 	cursor = conn.cursor()
 	cursor.execute("SELECT sub_user_id FROM Friends WHERE super_user_id = '{0}'".format(uid))
 	friends = []
 	for i in cursor:
 		fid = i[0]
 		friends.append(getEmailFromUserId(fid))
-	return render_template('friends.html', data=friends)
+	return friends
 
 #takes int of user id and returns email
 def getEmailFromUserId(uid):
@@ -364,10 +370,43 @@ def getNameFromUserId(uid):
 	lname = cursor.fetchone()[0]
 	return fname + " " + lname
 
+# recommends friends (one friend of each of the user's friends, up to 10)
+def friends_of_friends():
+	email = flask_login.current_user.id
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	friends = get_friends(uid)
+	mutual_friends = []
+	count = 0
+	for i in friends: # runs through at most 10 friends with count var
+		fid = getUserIDFromEmail(i)
+		cursor = conn.cursor()
+		cursor.execute("SELECT sub_user_id FROM Friends WHERE super_user_id = '{0}'".format(fid))
+		if cursor.rowcount > 0:
+			for j in cursor: # nested loop checks for duplicates, at worst case would run 9 times (through users who have already been added)
+				mfid = j[0] # friend of friend's id
+				user = getEmailFromUserId(mfid)
+				if (user != email) and (user not in mutual_friends):
+					mutual_friends.append(user)
+					break
+			count+=1
+			if count == 10: #recommend at most 10 friends of friends, depending on how many friends user has
+				break
+	return mutual_friends
+
+def added_by():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor() 
+	cursor.execute("SELECT super_user_id FROM Friends WHERE sub_user_id= '{0}'".format(uid))
+	added = []
+	for i in cursor:
+		fid = i[0]
+		if not alreadyFriends(uid, fid):
+			added.append(getEmailFromUserId(fid))
+	return added
+
 
 ######## END FRIEND METHODS #########
-
-
+	
 
 ######## ALBUM METHODS ###########
 
@@ -545,6 +584,7 @@ def insert_comment():
 	cursor.execute("SELECT user_id FROM Pictures WHERE picture_id = '{0}'".format(picture_id))
 	owner_id = cursor.fetchone()[0]
 	if (owner_id == uid): 
+		comment = retrieve_comments(picture_id)
 		return render_template('picture.html', err_message='You cannot comment on your own picture.', photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	# retrieve original fields 
 
