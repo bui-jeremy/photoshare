@@ -1,5 +1,39 @@
 <head>
     <title>Individual Picture</title>
+    <!doctype html>
+<head>
+  <title>{{album_name}}</title>
+  <style>
+      nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+        }
+      nav ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+      nav li {
+            margin-right: 20px;
+        }
+      nav a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+      nav a:hover {
+            background-color: #666;
+        }
+  </style>
 </head>
 
 {% if owner %}
@@ -9,10 +43,32 @@
     </form>
 {% endif %}
 
+<nav>
+    <ul>
+        <li><a href='/'>Home</a></li>
+        <li><a href='/friends'>View friends</a></li>
+        <li><a href='/album'>View albums</a></li>
+        <li><a href='/upload'>Upload a photo</a></li>
+        <li><a href='/activity'>Activity Leaderboard</a></li>
+        <li><a href='/logout'>Logout</a></li>
+    </ul>
+  </nav>
+  
 
 <h2>{% if name %} {{ name }} {% endif %}'s caption: {{photo[2]}}</h2>
     <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt= "{{photo[2]}} picture" width = 400vh height = 300vh/><br>
     <br>
+
+    <h3><b>Tags:</b></h3>
+    {% if not tags %}
+        <p>No tags yet!</p>
+    {% endif %}
+    
+    {% if tags %}
+        {% for tag in tags %}
+            {{ tag }} &emsp;
+        {% endfor %}
+    {% endif %}
 
     <form method="post" action="{{ url_for('picture_handler') }}">
         <h3>{{ num_likes }} Likes</h3>
@@ -51,21 +107,11 @@
         <br>
           {% for row in comment %}
             <tr>
-                <td><b>{{ comment[row] }} : </b>  {{ row }}</td> <br>
+                <td><b>{{ comment[row][0] }} (<i>{{ row }}</i>): </b> {{ comment[row][1] }}</td> <br>
             </tr>
         {% endfor %} 
 </tbody> <br>
 
-<h3><b>Tags:</b></h3>
-{% if not tags %}
-    <p>No tags yet!</p>
-{% endif %}
-
-{% if tags %}
-    {% for tag in tags %}
-        {{ tag }} &emsp;
-    {% endfor %}
-{% endif %}
 
 </br>
 </br>

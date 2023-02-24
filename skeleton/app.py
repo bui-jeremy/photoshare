@@ -24,7 +24,7 @@ app.secret_key = 'super secret string'  # Change this!
 
 #These will need to be changed according to your creditionals
 app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'mysql460'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'cs460'
 app.config['MYSQL_DATABASE_DB'] = 'photoshare'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
@@ -45,7 +45,7 @@ def getUserList():
 
 class User(flask_login.UserMixin):
 	pass
-
+    
 @login_manager.user_loader
 def user_loader(email):
 	users = getUserList()
@@ -69,6 +69,7 @@ def request_loader(request):
 	pwd = str(data[0][0] )
 	user.is_authenticated = request.form['password'] == pwd
 	return user
+
 
 '''
 A new page looks like this:
@@ -236,7 +237,6 @@ def retrieve_tags(picture_id):
 
 #default page
 @app.route("/", methods=['GET'])
-@flask_login.login_required
 def hello():
 	return render_template('hello.html', message='Welcome to Photoshare')
 
@@ -255,18 +255,40 @@ if __name__ == "__main__":
 # 	still need to make changes so friend search only appears when user is logged in
 #	friend is added immediately upon finding them and hitting submit button
 
-
-
-# search for one particular user, adds to friends if user exists
-@app.route('/', methods=['POST'])
-@flask_login.login_required
-def add_friends():
-	try:
-		email=request.form.get('email')
-
+@app.route('/', methods=['GET','POST'])
+def hello_friend_handler():
+	try: 
+		cmd = request.form.get('cmd')
+		email = request.form.get('email')
+		temp_email = request.form.get('hidden')
 	except:
-		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
-		return flask.redirect(flask.url_for('friends'))
+		print("couldn't find all tokens")
+		return flask.redirect(flask.url_for('hello'))
+	if cmd == 'Search':
+		return search_friends(email)
+	elif cmd == 'Add Friend':
+		return add_friends(temp_email)
+	else:
+		return friend_profile(temp_email)
+
+@app.route('/')
+def search_friends(email):
+	
+	test = isEmailUnique(email)
+	if test:
+		return render_template('hello.html', message='user does not exist')
+	else: 
+		super = getUserIdFromEmail(flask_login.current_user.id)
+		sub = getUserIdFromEmail(email)
+		if super == sub: # checks if searching for themselves
+			return render_template('hello.html', message='cannot search for yourself')
+		else: 
+			return render_template('hello.html', message='user exists', show_add_view_btns = email)
+		
+# search for one particular user, adds to friends if user exists
+@app.route('/')
+@flask_login.login_required
+def add_friends(email):
 	cursor = conn.cursor()
 	test =  isEmailUnique(email)
 
@@ -298,6 +320,7 @@ def alreadyFriends(super, sub):
 
 # adds friends to array to be printed in html table
 @app.route("/friends", methods=['GET'])
+@flask_login.login_required
 def friends():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	friends = get_friends(uid)
@@ -388,11 +411,13 @@ def added_by():
 ######## ALBUM METHODS ###########
 
 @app.route("/album", methods=['GET'])
+@flask_login.login_required
 def album():
 	albums = view_albums()
 	return render_template('album.html', data=albums)
 
 @app.route("/album", methods=['POST', 'GET'])
+@flask_login.login_required
 def album_handler():
 	cmd = request.form.get("cmd")
 	album = request.form.get('album') 
@@ -477,7 +502,7 @@ def getUsersPhotosFromAlbum(uid, album_id):
 @app.route("/activity", methods=['GET'])
 def activity():
 	cursor = conn.cursor()
-	cursor.execute("SELECT user_id, SUM(posts_or_comments) as Total FROM (SELECT user_id, COUNT(*) as posts_or_comments FROM pictures GROUP BY user_id UNION ALL SELECT user_id, COUNT(*) as posts_or_comments FROM comments GROUP BY user_id) as combinted_table GROUP BY user_id ORDER BY Total DESC LIMIT 3")
+	cursor.execute("SELECT user_id, SUM(posts_or_comments) as Total FROM (SELECT user_id, COUNT(*) as posts_or_comments FROM pictures WHERE user_id IS NOT NULL GROUP BY user_id UNION ALL SELECT user_id, COUNT(*) as posts_or_comments FROM comments WHERE user_id IS NOT NULL GROUP BY user_id) as combinted_table GROUP BY user_id ORDER BY Total DESC LIMIT 3")
 	activity_dict = {}
 	for i in cursor:
 		activity_dict[getEmailFromUserId(i[0])] = i[1] 
@@ -563,7 +588,11 @@ def insert_comment():
 	# fields to update with comments
 	picture_id = request.form.get('hidden')
 	text = request.form.get('comment')
-	uid = getUserIDFromEmail(flask_login.current_user.id)
+	print('test')
+	if (flask_login.AnonymousUserMixin):
+		uid = None
+	else: 
+		uid = getUserIDFromEmail(flask_login.current_user.id)
 	doc = date.today()
 
 	photo = getPhotoFromPictureID(picture_id)
@@ -582,8 +611,12 @@ def insert_comment():
 	# retrieve original fields 
 
 	# insert into database if the passes conditional
-	print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
+	if (uid != None): 
+		print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
+	else: 
+		print(cursor.execute("INSERT INTO Comments (picture_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}')".format(picture_id, text, doc)))
 	conn.commit()
+
 	# update new comments page
 	comment = retrieve_comments(picture_id)
 
@@ -593,10 +626,13 @@ def insert_comment():
 def retrieve_comments(picture_id):
 	picture_id = picture_id
 	cursor = conn.cursor()
-	cursor.execute("SELECT user_id, text_comment FROM Comments WHERE picture_id = '{0}'".format(picture_id))
+	cursor.execute("SELECT user_id, text_comment, date_of_comment FROM Comments WHERE picture_id = '{0}'".format(picture_id))
 	comment_dict = {}
 	for i in cursor: 
-		comment_dict[i[1]] = getEmailFromUserId(i[0])
+		if (i[0] == None):
+			comment_dict[i[2]] = ["Anonymous", i[1]]
+		else:
+			comment_dict[i[2]] = [getEmailFromUserId(i[0]),i[1]]
 	return comment_dict
 
 ### COMMENT METHODS END ###
