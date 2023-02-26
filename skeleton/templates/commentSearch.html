@@ -1,7 +1,5 @@
-<head>
-    <title>View albums</title>
-</head>
-<title>{{album_name}}</title>
+
+<title>Comment Search</title>
 <style>
     nav {
           display: flex;
@@ -48,28 +46,34 @@
   </ul>
 </nav>
 
+<br>
+<form method = "post" action = "{{ url_for('commentSearch') }}">
+    <label for = "search"> Search for popular comments: </label>
+    <input type = "text" name = "search"/>
+    <input type="submit" name = "cmd" value = "Search" />
+  </form>
 
-<form method="post" action="{{ url_for('album_handler') }}">
-    <label for="album">View your albums:</label>
-    <select name="album">
-        {% for row in data %}
-                <option>{{ row }}</option>
-        {% endfor %}
-    </select>
-    <input type="submit" name="cmd" value="View"/>
-    <input type="submit" name="cmd" value="Delete"/><br/>
+  {% if name %}
+    <h3> Here are the comment results for "{{ name }}" :</h3>
+  {% endif %}
 
-</form>
-
-<form method="post" action="{{ url_for('create_album')}}">
-    <label for="album_name">Create album:</label>
-    <input type="text" name="album_name" required="true" /><br />
-    <input type="submit" name ="cmd" value="Create"/>
-</form>
-
-
-
-
-{% if message %}
-  <h4>{{message}}!</h4>
+  {% if users %}
+  <table>
+    <thead>
+      <tr>
+        <th>User's Name</th>
+        <th>Email Address</th>
+        <th>Number of Times Commented</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in users %}
+        <tr>
+          <td>{{ row }}</td>
+          <td>{{ users[row][0] }}</td>
+          <td>{{ users[row][1] }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endif %}

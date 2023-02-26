@@ -182,9 +182,9 @@ def allowed_file(filename):
 @app.route('/upload', methods=['GET', 'POST'])
 @flask_login.login_required
 def upload_file():
-	albums = view_albums() # this was also added for the else statement
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	albums = view_albums(uid) # this was also added for the else statement
 	if request.method == 'POST':
-		uid = getUserIdFromEmail(flask_login.current_user.id)
 		imgfile = request.files['photo']
 		caption = request.form.get('caption')
 		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
@@ -228,9 +228,7 @@ def retrieve_tags(picture_id):
 	cursor.execute("SELECT tag_description FROM Tags WHERE tag_id IN (SELECT tag_id FROM Photo_contain WHERE picture_id = '{0}')".format(picture_id))
 	tags = []
 	for i in cursor:
-		tag = i[0]
-		tags.append(tag)
-	
+		tags.append(i[0])
 	return tags
 #end photo uploading code
 
@@ -346,16 +344,18 @@ def getEmailFromUserId(uid):
 @app.route("/friends", methods=['POST', 'GET'])
 def friend_handler():
 	email = request.form.get('hidden') 
-	return friend_profile(email)
+	uid = getUserIdFromEmail(email)
+	data = view_albums(uid)
+	return friend_profile(email,data)
 
 # view friends' profile with buttons to view their photos
 @app.route("/friendProfile")
-def friend_profile(email):
+def friend_profile(email, data):
 	uid = getUserIdFromEmail(email)
 	name = getNameFromUserId(uid)
 	if (name == None):
 		name = email
-	return render_template('friendProfile.html', name=name, photos=getUsersPhotos(uid), base64=base64)
+	return render_template('friendProfile.html', name=name, photos=getUsersPhotos(uid), data=data, base64=base64)
 
 def getUserIDFromEmail(email):
 	cursor = conn.cursor()
@@ -413,7 +413,8 @@ def added_by():
 @app.route("/album", methods=['GET'])
 @flask_login.login_required
 def album():
-	albums = view_albums()
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	albums = view_albums(uid)
 	return render_template('album.html', data=albums)
 
 @app.route("/album", methods=['POST', 'GET'])
@@ -421,8 +422,9 @@ def album():
 def album_handler():
 	cmd = request.form.get("cmd")
 	album = request.form.get('album') 
+	uid = getUserIdFromEmail(flask_login.current_user.id)
 	if cmd == "View":
-		return viewAlbumPage(album, "")
+		return viewAlbumPage(album, "", uid)
 	elif cmd == "Delete":
 		return delete_album(album)
 	else:
@@ -430,19 +432,24 @@ def album_handler():
 
 
 @app.route("/viewAlbum")
-def viewAlbumPage(album, message):
+def viewAlbumPage(album, message, uid, name = None):
 	album_id = getAlbumId(album)
-	uid = getUserIdFromEmail(flask_login.current_user.id)
 	photos=getUsersPhotosFromAlbum(uid, album_id)
-	return render_template('viewAlbum.html', album_name=album, message=message, photos=photos, base64=base64)
+	return render_template('viewAlbum.html', album_name=album, message=message, photos=photos, name=name, base64=base64)
 
 @app.route("/album")
 def delete_album(album):
 	album_id = getAlbumId(album)
+	uid = getUserIDFromAlbumID(album_id)
 	cursor = conn.cursor()
 	print(cursor.execute("DELETE FROM Albums WHERE album_id = '{0}'".format(int(album_id))))
 	conn.commit()
-	return render_template('album.html', message="deleted", data=view_albums())
+	return render_template('album.html', message="deleted", data=view_albums(uid))
+
+def getUserIDFromAlbumID(album_id):
+	cursor = conn.cursor()
+	cursor.execute("SELECT owner_id FROM Albums WHERE album_id = '{0}'".format(album_id))
+	return cursor.fetchone()[0]
 
 from datetime import date # need to move this to the top, but i wanted to keep new stuff in one place for now
 
@@ -462,12 +469,11 @@ def create_album():
 		doc = date.today()
 		print(cursor.execute("INSERT INTO Albums (owner_id, album_name, date_of_creation) VALUES ('{0}', '{1}', '{2}')".format(int(uid), album_name, doc)))
 		conn.commit()
-		return render_template('album.html', message = 'album created', data=view_albums())
+		return render_template('album.html', message = 'album created', data=view_albums(uid))
 	else:
-		return render_template('album.html', message='album under same name already exists', data=view_albums())
+		return render_template('album.html', message='album under same name already exists', data=view_albums(uid))
 
-def view_albums():
-	uid = getUserIdFromEmail(flask_login.current_user.id)
+def view_albums(uid):
 	cursor = conn.cursor()
 	cursor.execute("SELECT album_name FROM Albums WHERE owner_id = '{0}'".format(uid))
 	albums = []
@@ -488,7 +494,7 @@ def albumExists(album_name):
 
 def getAlbumId(album_name):
 	cursor = conn.cursor()
-	cursor.execute("SELECT album_id  FROM Albums WHERE album_name = '{0}'".format(album_name))
+	cursor.execute("SELECT album_id FROM Albums WHERE album_name = '{0}'".format(album_name))
 	return cursor.fetchone()[0]
 
 
@@ -513,12 +519,23 @@ def activity():
 @app.route("/activity", methods=['POST', 'GET'])
 def activity_handler():
 	email = request.form.get('hidden') 
-	return friend_profile(email)
+	uid = getUserIdFromEmail(email)
+	data = view_albums(uid)
+	return friend_profile(email, data)
 
 @app.route("/friendProfile", methods=['Post','GET'])
-def friendProfilePicture_handler():
+def friendProfile_handler():
 	picture_id = request.form.get('hidden')
-	return picture(picture_id)
+	album = request.form.get('album')
+
+	cmd = request.form.get('cmd')
+	if cmd == "View":
+		album_id = getAlbumId(album)
+		profile_uid = getUserIDFromAlbumID(album_id)
+		name = getNameFromUserId(profile_uid)
+		return viewAlbumPage(album, "", profile_uid, name)
+	else:
+		return picture(picture_id)
 
 ### ACTIVITY ENDS ###
 
@@ -539,8 +556,10 @@ def picture(picture_id):
 	tags = retrieve_tags(picture_id)
 	# load in likes and users
 	num_likes, users_liked = count_likes(picture_id)
-	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
-	return render_template('picture.html', photo=photo, name = name, comment=comment, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
+	owner = (getUserIDFromPictureID(picture_id) == flask_login.current_user.id)
+	user_id = getUserIDFromPictureID(picture_id)
+	print('user_id: ', user_id)
+	return render_template('picture.html', photo=photo, name = name, comment=comment, user_id=user_id, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
 
 def getPhotoFromPictureID(picture_id):
 	cursor = conn.cursor()
@@ -663,7 +682,8 @@ def like_photo():
 		comment = retrieve_comments(picture_id)
 		tags = retrieve_tags(picture_id)
 		owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
-		return render_template('picture.html', err_message='Already Liked!', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
+		user_id = getUserIDFromPictureID(picture_id)
+		return render_template('picture.html', err_message='Already Liked!', owner=owner, photo=photo, name=name, user_id = user_id, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	cursor.execute("INSERT INTO Liked_by (user_id, picture_id) VALUES ('{0}', '{1}')".format(uid, picture_id))
 	conn.commit()
 	return picture(picture_id)
@@ -679,11 +699,93 @@ def already_liked(picture_id, uid):
 @app.route("/picture", methods=['POST', 'GET'])
 def picture_handler():
 	cmd = request.form.get("cmd")
+	user_id = request.form.get("user_id")
+	print('hi')
+	print(user_id)
 	if cmd == "Like":
 		return like_photo()
 	elif cmd == "Delete Photo":
 		return delete_photo()
-	else: # hit button to submit comment
-	 	return insert_comment()
+	else: 
+		# check to see if a tag is clicked on
+		tag = request.form.get("tag")
+		if (tag != None):
+			return tagPictures(tag, user_id)
+		else:
+	 		return insert_comment() # hit button to submit comment
+	
+### RECOMMENDED USERS ###
+@app.route("/pictureRecommend", methods=['GET'])
+def recommendation():
+	conn.cursor()
+	cursor.execute("SELECT uid FROM friends INNER JOIN user on friends.")
 
+### COMMENT SEARCH ###
+@app.route("/commentSearch", methods=['GET', 'POST'])
+def commentSearch():
+	search = request.form.get('search')
+	conn.cursor()
+	cursor.execute("SELECT user_id, COUNT(*) AS comment_count FROM Comments WHERE text_comment='{0}' AND user_id IS NOT NULL GROUP BY user_id ORDER BY comment_count DESC".format(search))
+	users = {}
+	for i in cursor:
+		users[getNameFromUserId(i[0])] = (getEmailFromUserId(i[0]), i[1])
+	return render_template('commentSearch.html', name=search, users = users)
+
+### END OF COMMENT SEARCH ###
+
+### TAG VIEW ###
+
+# view tags by clicking on them in the picture page
+@app.route("/tagPictures")
+def tagPictures(tag_description, user_id):
+	conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption, user_id FROM Pictures WHERE user_id = '{0}' AND picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{1}'))".format(user_id, tag_description))
+	data = cursor.fetchall()
+	personal = getNameFromUserId(user_id)
+	return render_template('tagPictures.html', photos = data, personal=personal, name = tag_description, base64 = base64)
+
+
+def getTagIdFromDescription(tag_description):
+	conn.cursor()
+	cursor.execute("SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{0}')".format(tag_description))
+	return cursor.fetchall()[0]
+
+@app.route("/tagPictures", methods=['GET', 'POST'])
+def tagPicture_handler():
+	picture_id = request.form.get('hidden')
+	return picture(picture_id)
+
+# handle different buttons on tagSearch page
+@app.route("/tagSearch", methods=['GET', 'POST'])
+def tagSearch_handler():
+	try:
+		cmd = request.form.get("cmd")
+		tag = request.form.get("tag")
+		search = request.form.get("search")
+	except:
+		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
+		return flask.redirect(flask.url_for('hello'))
+	
+	if (cmd == "Search"):
+		return tagPictures(search)
+	elif (tag != None): 
+		return tagPictures(tag)
+	else:
+		return getTopTags()
+# refresh page with all the photos that have the tag
+@app.route("/tagSearch")
+def displayAllPhotos(tag_description):
+	conn.cursor()
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{0}'))".format(tag_description))
+	data = cursor.fetchall()
+	return render_template('tagSearch.html', photos = data, name = tag_description, base64 = base64)
+
+# return top 3 most used tags
+def getTopTags():
+	conn.cursor()
+	cursor.execute("SELECT tag_description, COUNT(*) AS tag_count FROM Tags WHERE tag_id IN (SELECT tag_id FROM photo_contain) GROUP BY tag_description ORDER BY tag_count DESC LIMIT 3")
+	tags = {}
+	for i in cursor:
+		tags[i[0]] = i[1]
+	return render_template('tagSearch.html', tags = tags)
 ### end of new stuff

@@ -1,5 +1,5 @@
 <head>
-    <title>View albums</title>
+    <title>Recommendations</title>
 </head>
 <title>{{album_name}}</title>
 <style>
@@ -48,28 +48,17 @@
   </ul>
 </nav>
 
-
-<form method="post" action="{{ url_for('album_handler') }}">
-    <label for="album">View your albums:</label>
-    <select name="album">
-        {% for row in data %}
-                <option>{{ row }}</option>
+<h2>Recommended Pictures: </h2>
+{% if pictures %}
+    <ul>
+        {% for picture in pictures %}
+            <li>
+                <a href="/picture/{{picture.id}}">
+                    <img src="{{picture.url}}" alt="{{picture.name}}">
+                </a>
+            </li>
         {% endfor %}
-    </select>
-    <input type="submit" name="cmd" value="View"/>
-    <input type="submit" name="cmd" value="Delete"/><br/>
-
-</form>
-
-<form method="post" action="{{ url_for('create_album')}}">
-    <label for="album_name">Create album:</label>
-    <input type="text" name="album_name" required="true" /><br />
-    <input type="submit" name ="cmd" value="Create"/>
-</form>
-
-
-
-
-{% if message %}
-  <h4>{{message}}!</h4>
+    </ul>
+{% else %}
+    <p>No pictures found.</p>
 {% endif %}

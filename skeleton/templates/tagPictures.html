@@ -1,5 +1,5 @@
 <head>
-    <title>{{album_name}}</title>
+    <title>{{name}}</title>
     <style>
         ul {
             display: grid;
@@ -51,6 +51,7 @@
         }
     </style>
 </head>
+
 <nav>
     <ul>
         <li><a href='/'>Home</a></li>
@@ -71,13 +72,12 @@
 {% endif %}
 
 {% if photos %}
-    <h2>{% if not name %} Here are your photos {% endif %}</h2>
-    <h2>{% if name %} Here are {{ name }}'s photos {% endif %}</h2>
+    {% if personal %} <h2>{% if name %} Here are all of {{ personal }}'s pictures with the tag "{{ name }}."{% endif %}</h2> 
+    {% else %} <h2>{% if name %} Here are all pictures with the tag "{{ name }}."{% endif %}</h2>{% endif %}
     <ul>
         {% for photo in photos %}
             <li>
-                {{photo[2]}}
-                <form method="post" action="{{ url_for('albumPicture_handler') }}">
+                <form method="post" action="{{ url_for('tagPicture_handler') }}">
                     <input type="hidden" name="hidden" value="{{ photo[1] }}" />
                     <button type="submit" value="hidden">
                         <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
@@ -87,6 +87,3 @@
         {% endfor %}
     </ul>
 {% endif %}
-
-
-<a href='/'>Home</a>

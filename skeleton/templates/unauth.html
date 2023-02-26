@@ -1,5 +1,52 @@
 <!doctype html>
 <title> Unauthorized</title>
+<title>{{album_name}}</title>
+<style>
+    nav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background-color: #333;
+          color: #fff;
+          padding: 10px;
+      }
+    nav ul {
+          display: flex;
+          list-style: none;
+          margin: 0;
+          padding: 0;
+      }
+    nav li {
+          margin-right: 20px;
+      }
+    nav a {
+          color: #fff;
+          text-decoration: none;
+          font-size: 18px;
+          font-weight: bold;
+          padding: 5px 10px;
+          border-radius: 5px;
+          transition: background-color 0.3s ease;
+      }
+    nav a:hover {
+          background-color: #666;
+      }
+</style>
+</head>
+<nav>
+  <ul>
+      <li><a href='/'>Home</a></li>
+      <li><a href='/friends'>View friends</a></li>
+      <li><a href='/album'>View albums</a></li>
+      <li><a href='/upload'>Upload a photo</a></li>
+      <li><a href='/activity'>Activity Leaderboard</a></li>
+      <li><a href='/recommendation'>Recommendations</a></li>
+      <li><a href='/commentSearch'>Popular Comments</a></li>
+      <li><a href='/tagSearch'>Trending Tags</a></li>
+      <li><a href='/logout'>Logout</a></li>
+  </ul>
+</nav>
+
 <h1> Yikes, looks like you need to <a href='/login'>login</a></h1>
 <h1> or <a href='/register'>make an account</a></h1>
 

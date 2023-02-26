@@ -4,11 +4,15 @@
 <head>
   <title>{{album_name}}</title>
   <style>
+    mark { 
+    background-color: rgb(189, 188, 188);
+    color: black;
+    }
       nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color: #333;
+            background-color: #919090;
             color: #fff;
             padding: 10px;
         }
@@ -43,10 +47,12 @@
         <li><a href='/album'>View albums</a></li>
         <li><a href='/upload'>Upload a photo</a></li>
         <li><a href='/activity'>Activity Leaderboard</a></li>
+        <li><a href='/commentSearch'>Popular Comments</a></li>
+        <li><a href='/tagSearch'>Trending Tags</a></li>
         <li><a href='/logout'>Logout</a></li>
     </ul>
   </nav>
-  
+
 {% if owner %}
   <form method="post" action="{{ url_for('picture_handler') }}">
       <input type="hidden" name="hidden"  value="{{ photo[1] }}" />
@@ -58,14 +64,17 @@
     <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt= "{{photo[2]}} picture" width = 400vh height = 300vh/><br>
     <br>
 
-    <h3><b>Tags:</b></h3>
+    <h3><b>Tag(s):</b></h3>
     {% if not tags %}
         <p>No tags yet!</p>
     {% endif %}
     
     {% if tags %}
         {% for tag in tags %}
-            {{ tag }} &emsp;
+            <form method="post" action="{{ url_for('picture_handler') }}" style="display: inline-block; margin-right: 10px;">
+            <input type="hidden" name ="user_id" value="{{ user_id }}"/>
+            <input type="submit" name="tag"  value="{{ tag }}" style="display: inline-block; margin-right: 10px;" /> 
+            </form>
         {% endfor %}
     {% endif %}
 
