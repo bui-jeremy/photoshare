@@ -370,28 +370,30 @@ def getNameFromUserId(uid):
 	lname = cursor.fetchone()[0]
 	return fname + " " + lname
 
-# recommends friends (one friend of each of the user's friends, up to 10)
+# recommends friends (top 10 friends of friends, sorts by how many times the user is found in other friend lists)
 def friends_of_friends():
 	email = flask_login.current_user.id
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	friends = get_friends(uid)
-	mutual_friends = []
-	count = 0
-	for i in friends: # runs through at most 10 friends with count var
+	mutual_friends = {}
+
+	for i in friends: # runs through all friends of user
 		fid = getUserIDFromEmail(i)
 		cursor = conn.cursor()
 		cursor.execute("SELECT sub_user_id FROM Friends WHERE super_user_id = '{0}'".format(fid))
 		if cursor.rowcount > 0:
-			for j in cursor: # nested loop checks for duplicates, at worst case would run 9 times (through users who have already been added)
+			for j in cursor: # nested loop checks for duplicates, adds to count of how many times a user has been found
 				mfid = j[0] # friend of friend's id
 				user = getEmailFromUserId(mfid)
-				if (user != email) and (user not in friends) and (user not in mutual_friends):
-					mutual_friends.append(user)
-					break
-			count+=1
-			if count == 10: #recommend at most 10 friends of friends, depending on how many friends user has
-				break
-	return mutual_friends
+				if (user != email) and (user not in friends) :
+					try:
+						mutual_friends[user] += 1
+					except:
+						mutual_friends[user] = 1
+						
+	mutual_friends_sorted = dict(sorted(mutual_friends.items(), key = lambda x:x[1], reverse = True)) # sort by value
+
+	return list(mutual_friends_sorted)[:10]
 
 def added_by():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
