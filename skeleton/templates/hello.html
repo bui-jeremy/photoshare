@@ -2,6 +2,11 @@
 <head>
   <title>{{album_name}}</title>
   <style>
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
       nav {
             display: flex;
             justify-content: space-between;
@@ -48,17 +53,17 @@
 </nav>
 
 {% if message %}
-  <h4>{{message}}!</h4>
+  <h2>{{message}}!</h2>
 {% endif %}
 <title>Photoshare</title>
 {% if name %}
-  <h1>Hello {{ name }}!</h1>
+  <h4>Hello {{ name }}!</h4>
 {% endif %}
 
-
+<p>Looking for friends?</p>
 <form method="post" action="{{ url_for('hello_friend_handler') }}">
-  <label for="email">Search user:</label>
-  <input type="email" name="email" required="true" /><br />
+  <label for="email">Search user (email):</label>
+  <input type="email" name="email" required="true" /> <br/>
   <input type="submit" name = "cmd" value = "Search" />
 </form>
 
@@ -80,7 +85,7 @@
           <form method="post" action="{{ url_for('hello_friend_handler') }}">
             <input type="hidden" name="photo_id" value="{{ photo[1] }}" />
             <button type="submit" value="hidden">
-                <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
+                <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width="200" height="200" />
             </button>
           </form>          
     {% endfor %}

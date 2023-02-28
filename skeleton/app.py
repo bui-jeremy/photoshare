@@ -176,7 +176,10 @@ def isEmailUnique(email):
 @app.route('/profile')
 @flask_login.login_required
 def protected():
-	return render_template('hello.html', name=flask_login.current_user.id, message="Here's your profile")
+	uid = getUserIDFromEmail(flask_login.current_user.id)
+	photos = getUsersPhotos(uid)
+	print(photos)
+	return render_template('hello.html', name=flask_login.current_user.id, photos=photos, message="Here's your profile", base64=base64)
 
 #begin photo uploading code
 # photos uploaded using base64 encoding so they can be directly embeded in HTML
@@ -853,6 +856,15 @@ def displayAllPhotos(tag_description):
 	data = cursor.fetchall()
 	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)
 
+def findAllPictureIDs(tag_list, size_list):
+	conn.cursor()
+	cursor.execute(''' 
+					   SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN
+					   (SELECT picture_id FROM photo_contain 
+					   JOIN tags on photo_contain.tag_id = tags.tag_id 
+					   WHERE tags.tag_description in ({0}) GROUP BY photo_contain.picture_id 
+					   HAVING COUNT(DISTINCT tags.tag_id) =  {1} )'''.format(tag_list, size_list))
+	return cursor.fetchall()
 
 # return top 3 most used tags
 def getTopTags():

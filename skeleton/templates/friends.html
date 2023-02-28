@@ -52,6 +52,8 @@
 <h1>Friends' List: </h1>
 
 </form>
+
+{% if data %}
 <table>
     <thead>
         <tr>
@@ -102,6 +104,7 @@
         {% endfor %}
     </tbody>
 </table>
-
-<a href='/'>Home</a>
+{% else %}  
+    <h4>No friends found. Therefore, we can not recommend you any friends! </h4>
+{% endif %}
 
