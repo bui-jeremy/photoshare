@@ -264,6 +264,7 @@ def hello_friend_handler():
 		cmd = request.form.get('cmd')
 		email = request.form.get('email')
 		temp_email = request.form.get('hidden')
+		photo_id = request.form.get('photo_id')
 	except:
 		print("couldn't find all tokens")
 		return flask.redirect(flask.url_for('hello'))
@@ -271,6 +272,8 @@ def hello_friend_handler():
 		return search_friends(email)
 	elif cmd == 'Add Friend':
 		return add_friends(temp_email)
+	elif photo_id != None: 
+		return picture(photo_id)
 	else:
 		return friend_profile(temp_email)
 
@@ -493,7 +496,7 @@ def albumExists(album_name):
 	#use this to check if an album has already been created
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	cursor = conn.cursor()
-	if cursor.execute("SELECT album_name  FROM Albums WHERE (album_name = '{0}' AND owner_id = '{1}')".format(album_name, uid)):
+	if cursor.execute("SELECT album_name FROM Albums WHERE (album_name = '{0}' AND owner_id = '{1}')".format(album_name, uid)):
 		#this means there are greater than zero entries with that album name for this user
 		return True
 	else:
@@ -565,7 +568,6 @@ def picture(picture_id):
 	num_likes, users_liked = count_likes(picture_id)
 	owner = (getUserIDFromPictureID(picture_id) == flask_login.current_user.id)
 	user_id = getUserIDFromPictureID(picture_id)
-	print('user_id: ', user_id)
 	return render_template('picture.html', photo=photo, name = name, comment=comment, user_id=user_id, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
 
 def getPhotoFromPictureID(picture_id):
@@ -771,10 +773,16 @@ def tagSearch_handler():
 	except:
 		print("couldn't find all tokens") #this prints to shell, end users will not see this (all print statements go to shell)
 		return flask.redirect(flask.url_for('hello'))
-	
+	# split the potential string of tags into a list
+
 	if (cmd == "Search"):
+<<<<<<< Updated upstream
 		search = search.split(',')
 
+=======
+		if (search != ""):
+			search = search.split(',')
+>>>>>>> Stashed changes
 		return displayAllPhotos(search)
 	elif (tag != None): 
 		return displayAllPhotos([tag])
@@ -783,13 +791,23 @@ def tagSearch_handler():
 	
 # refresh page with all the photos that have the tag
 @app.route("/tagSearch")
-def displayAllPhotos(tag_description):
+def displayAllPhotos(tag_list):
+	# combine into tuples of string ex "Hello","World"
+	new_tag_list = []
+	for tag in tag_list:
+		new_tag_list.append("'" + tag + "'")
+	tag_description  = ",".join(new_tag_list)
 	conn.cursor()
+<<<<<<< Updated upstream
 	tag_list = []
 	for tag in tag_description:
 		tag_list.append("'" + tag + "'")
 	tag_list = ",".join(tag_list)
 	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description IN ({0})))".format(tag_list))
+=======
+	print(tag_description)
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description IN ({0})))".format(tag_description))
+>>>>>>> Stashed changes
 	data = cursor.fetchall()
 	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)
 
@@ -801,4 +819,5 @@ def getTopTags():
 	for i in cursor:
 		tags[i[0]] = i[1]
 	return render_template('tagSearch.html', tags = tags)
+
 ### end of new stuff

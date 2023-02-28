@@ -77,10 +77,16 @@
     {% for photo in photos %}
 
         <li>{{photo[2]}}<br>
-        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}'/></li>
+          <form method="post" action="{{ url_for('hello_friend_handler') }}">
+            <input type="hidden" name="photo_id" value="{{ photo[1] }}" />
+            <button type="submit" value="hidden">
+                <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
+            </button>
+          </form>          
     {% endfor %}
     </ul>
 {% endif %}
+
 
 {% if message is none %}
   <p>You should <a href='/login'>login!</a></p>
