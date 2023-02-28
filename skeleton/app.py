@@ -837,13 +837,8 @@ def tagPictures(tag_description, user_id):
 	conn.cursor()
 	cursor.execute("SELECT imgdata, picture_id, caption, user_id FROM Pictures WHERE user_id = '{0}' AND picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{1}'))".format(user_id, tag_description))
 	data = cursor.fetchall()
-	if user_id != -1:
-		personal = getNameFromUserId(user_id)
-		return render_template('tagPictures.html', photos = data, personal=personal, name = tag_description, base64 = base64)
-	else:
-		return render_template('tagPictures.html', photos = data, name = tag_description, base64 = base64)
-	
-
+	personal = getNameFromUserId(user_id)
+	return render_template('tagPictures.html', photos = data, personal=personal, name = tag_description, base64 = base64)
 
 def getTagIdFromDescription(tag_description):
 	conn.cursor()
@@ -868,12 +863,10 @@ def tagSearch_handler():
 	# split the potential string of tags into a list
 
 	if (cmd == "Search"):
-		return tagPictures(search, -1)
 		if (search != ""):
 			search = search.split(',')
 		return displayAllPhotos(search)
 	elif (tag != None): 
-		return tagPictures(tag, -1)
 		return displayAllPhotos([tag])
 	else:
 		return getTopTags()
@@ -898,15 +891,6 @@ def displayAllPhotos(tag_description):
 	data = cursor.fetchall()
 	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)
 
-def findAllPictureIDs(tag_list, size_list):
-	conn.cursor()
-	cursor.execute(''' 
-					   SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN
-					   (SELECT picture_id FROM photo_contain 
-					   JOIN tags on photo_contain.tag_id = tags.tag_id 
-					   WHERE tags.tag_description in ({0}) GROUP BY photo_contain.picture_id 
-					   HAVING COUNT(DISTINCT tags.tag_id) =  {1} )'''.format(tag_list, size_list))
-	return cursor.fetchall()
 
 # return top 3 most used tags
 def getTopTags():
