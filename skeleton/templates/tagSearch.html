@@ -1,7 +1,29 @@
-
-<title>Tag Search</title>
-<style>
-    nav {
+<head>
+  <title>{{album_name}}</title>
+  <style>
+    body {
+        background-color: #e5e5e5;
+      }
+      ul {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          grid-gap: 10px;
+          list-style: none;
+          padding: 0;
+          margin: 0;
+      }
+      li {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+      }
+      img {
+          max-width: 100%;
+          height: auto;
+      }
+      nav {
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -30,22 +52,21 @@
     nav a:hover {
           background-color: #666;
       }
-  
-</style>
+  </style>
 </head>
 <nav>
-    <ul>
-        <li><a href='/'>Home</a></li>
-        <li><a href='/friends'>View friends</a></li>
-        <li><a href='/album'>View albums</a></li>
-        <li><a href='/upload'>Upload a photo</a></li>
-        <li><a href='/activity'>Activity Leaderboard</a></li>
-        <li><a href='/recommendation'>Recommendations</a></li>
-        <li><a href='/commentSearch'>Popular Comments</a></li>
-        <li><a href='/tagSearch'>Trending Tags</a></li>
-        <li><a href='/logout'>Logout</a></li>
-    </ul>
-  </nav>
+  <ul>
+      <li><a href='/'>Home</a></li>
+      <li><a href='/friends'>View friends</a></li>
+      <li><a href='/album'>View albums</a></li>
+      <li><a href='/upload'>Upload a photo</a></li>
+      <li><a href='/activity'>Activity Leaderboard</a></li>
+      <li><a href='/recommendation'>Recommendations</a></li>
+      <li><a href='/commentSearch'>Popular Comments</a></li>
+      <li><a href='/tagSearch'>Trending Tags</a></li>
+      <li><a href='/logout'>Logout</a></li>
+  </ul>
+</nav>
   
 
 <br>
