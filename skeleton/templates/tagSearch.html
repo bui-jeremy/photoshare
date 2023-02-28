@@ -30,6 +30,7 @@
     nav a:hover {
           background-color: #666;
       }
+  
 </style>
 </head>
 <nav>
@@ -83,7 +84,7 @@
                 <form method="post" action="{{ url_for('tagPicture_handler') }}">
                     <input type="hidden" name="hidden" value="{{ photo[1] }}" />
                     <button type="submit" value="hidden">
-                        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
+                        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width="200" height="200"/>
                     </button>
                 </form>
             </li>

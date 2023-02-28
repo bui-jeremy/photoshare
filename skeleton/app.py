@@ -13,7 +13,8 @@ import flask
 from flask import Flask, Response, request, render_template, redirect, url_for
 from flask import Flask, Response, request, render_template, redirect, url_for, session, flash
 from flaskext.mysql import MySQL
-import flask_login
+import flask_login 
+from flask_login import AnonymousUserMixin
 
 #for image uploading
 import os, base64
@@ -45,6 +46,10 @@ def getUserList():
 
 class User(flask_login.UserMixin):
 	pass
+
+class Anonymous(AnonymousUserMixin):
+  def __init__(self):
+    self.username = 'Anonymous'
     
 @login_manager.user_loader
 def user_loader(email):
@@ -609,8 +614,8 @@ def insert_comment():
 	# fields to update with comments
 	picture_id = request.form.get('hidden')
 	text = request.form.get('comment')
-	print('test')
-	if (flask_login.AnonymousUserMixin):
+
+	if (flask_login.current_user.id == "Anonymous"):
 		uid = None
 	else: 
 		uid = getUserIDFromEmail(flask_login.current_user.id)
@@ -619,7 +624,7 @@ def insert_comment():
 	photo = getPhotoFromPictureID(picture_id)
 	name = getNameFromPictureID(picture_id)
 	tags = retrieve_tags(picture_id)
-	num_likes, users_liked =count_likes(picture_id)
+	num_likes, users_liked = count_likes(picture_id)
 	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
 
 	# check if user is trying to comment on their own picture
@@ -630,7 +635,6 @@ def insert_comment():
 		comment = retrieve_comments(picture_id)
 		return render_template('picture.html', err_message='You cannot comment on your own picture.', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	# retrieve original fields 
-
 	# insert into database if the passes conditional
 	if (uid != None): 
 		print(cursor.execute("INSERT INTO Comments (picture_id, user_id, text_comment, date_of_comment) VALUES ('{0}','{1}','{2}','{3}')".format(picture_id, uid, text, doc)))
@@ -640,7 +644,7 @@ def insert_comment():
 
 	# update new comments page
 	comment = retrieve_comments(picture_id)
-
+	print(comment)
 	return render_template('picture.html', owner=owner, photo=photo, name=name, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 
 @app.route("/picture", methods=['GET'])
@@ -648,13 +652,13 @@ def retrieve_comments(picture_id):
 	picture_id = picture_id
 	cursor = conn.cursor()
 	cursor.execute("SELECT user_id, text_comment, date_of_comment FROM Comments WHERE picture_id = '{0}'".format(picture_id))
-	comment_dict = {}
+	comment = []
 	for i in cursor: 
 		if (i[0] == None):
-			comment_dict[i[2]] = ["Anonymous", i[1]]
+			comment.append(('Anonymous',i[1],i[2]))
 		else:
-			comment_dict[i[2]] = [getEmailFromUserId(i[0]),i[1]]
-	return comment_dict
+			comment.append((getEmailFromUserId(i[0]),i[1],i[2]))
+	return comment
 
 ### COMMENT METHODS END ###
 
@@ -769,18 +773,25 @@ def tagSearch_handler():
 		return flask.redirect(flask.url_for('hello'))
 	
 	if (cmd == "Search"):
-		return tagPictures(search)
+		search = search.split(',')
+
+		return displayAllPhotos(search)
 	elif (tag != None): 
-		return tagPictures(tag)
+		return displayAllPhotos([tag])
 	else:
 		return getTopTags()
+	
 # refresh page with all the photos that have the tag
 @app.route("/tagSearch")
 def displayAllPhotos(tag_description):
 	conn.cursor()
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{0}'))".format(tag_description))
+	tag_list = []
+	for tag in tag_description:
+		tag_list.append("'" + tag + "'")
+	tag_list = ",".join(tag_list)
+	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description IN ({0})))".format(tag_list))
 	data = cursor.fetchall()
-	return render_template('tagSearch.html', photos = data, name = tag_description, base64 = base64)
+	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)
 
 # return top 3 most used tags
 def getTopTags():

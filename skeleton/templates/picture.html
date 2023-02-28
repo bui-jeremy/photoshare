@@ -4,15 +4,11 @@
 <head>
   <title>{{album_name}}</title>
   <style>
-    mark { 
-    background-color: rgb(189, 188, 188);
-    color: black;
-    }
       nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color: #919090;
+            background-color: #333;
             color: #fff;
             padding: 10px;
         }
@@ -113,9 +109,9 @@
             <input type="submit" name="cmd" value="Submit"/>
         </form>
         <br>
-          {% for row in comment %}
+          {% for (x,y,z) in comment %}
             <tr>
-                <td><b>{{ comment[row][0] }} (<i>{{ row }}</i>): </b> {{ comment[row][1] }}</td> <br>
+                <td><b>{{ x }} (<i>{{ z }}</i>): </b> {{ y }}</td> <br>
             </tr>
         {% endfor %} 
 </tbody> <br>

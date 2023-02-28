@@ -2,26 +2,26 @@
 <head>
   <title>{{album_name}}</title>
   <style>
-      ul {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          grid-gap: 10px;
-          list-style: none;
-          padding: 0;
-          margin: 0;
-      }
-      li {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-      }
-      img {
-          max-width: 100%;
-          height: auto;
-      }
-      nav {
+       ul {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 10px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -93,7 +93,7 @@
           <form method="post" action="{{ url_for('friendProfile_handler') }}" style="display: inline;"> 
             <input type="hidden" name="hidden"  value="{{ photo[1] }}"  style="display: inline;"/>
             <button type="submit" name = "cmd" value="hidden">
-                <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width = "110" height = "110"/>
+                <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width = "200" height = "200"/>
             </button>
           </form>
     {% endfor %}

@@ -1,7 +1,9 @@
 <head>
     <title>{{name}}</title>
+
+    <title>Tag Search</title>
     <style>
-        ul {
+       ul {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             grid-gap: 10px;
@@ -49,23 +51,24 @@
       nav a:hover {
             background-color: #666;
         }
+      
     </style>
+    </head>
+    <nav>
+        <ul>
+            <li><a href='/'>Home</a></li>
+            <li><a href='/friends'>View friends</a></li>
+            <li><a href='/album'>View albums</a></li>
+            <li><a href='/upload'>Upload a photo</a></li>
+            <li><a href='/activity'>Activity Leaderboard</a></li>
+            <li><a href='/recommendation'>Recommendations</a></li>
+            <li><a href='/commentSearch'>Popular Comments</a></li>
+            <li><a href='/tagSearch'>Trending Tags</a></li>
+            <li><a href='/logout'>Logout</a></li>
+        </ul>
+      </nav>
 </head>
 
-<nav>
-    <ul>
-        <li><a href='/'>Home</a></li>
-        <li><a href='/friends'>View friends</a></li>
-        <li><a href='/album'>View albums</a></li>
-        <li><a href='/upload'>Upload a photo</a></li>
-        <li><a href='/activity'>Activity Leaderboard</a></li>
-        <li><a href='/recommendation'>Recommendations</a></li>
-        <li><a href='/commentSearch'>Popular Comments</a></li>
-        <li><a href='/tagSearch'>Trending Tags</a></li>
-        <li><a href='/logout'>Logout</a></li>
-    </ul>
-  </nav>
-  
 
 {% if message %}
   <h4>{{message}}</h4>
@@ -80,7 +83,7 @@
                 <form method="post" action="{{ url_for('tagPicture_handler') }}">
                     <input type="hidden" name="hidden" value="{{ photo[1] }}" />
                     <button type="submit" value="hidden">
-                        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" />
+                        <img src='data:image/jpg;base64, {{ base64.b64encode(photo[0]).decode("ascii") }}' alt="buttonpng" width="200" height="200" />
                     </button>
                 </form>
             </li>
