@@ -53,6 +53,7 @@
   <form method="post" action="{{ url_for('picture_handler') }}">
       <input type="hidden" name="hidden"  value="{{ photo[1] }}" />
       <input type="submit" name="cmd" value="Delete Photo"/>
+      <input type="submit" name="cmd" value="Delete From Album"/>
   </form>
 {% endif %}
 

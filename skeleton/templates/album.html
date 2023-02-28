@@ -48,7 +48,7 @@
   </ul>
 </nav>
 
-
+{% if data %}
 <form method="post" action="{{ url_for('album_handler') }}">
     <label for="album">View your albums:</label>
     <select name="album">
@@ -60,6 +60,7 @@
     <input type="submit" name="cmd" value="Delete"/><br/>
 
 </form>
+{% endif %}
 
 <form method="post" action="{{ url_for('create_album')}}">
     <label for="album_name">Create album:</label>

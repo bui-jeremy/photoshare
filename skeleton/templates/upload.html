@@ -59,13 +59,16 @@
                 <label for="caption"><font color="red">*</font>Please caption:</label>
                 <input type="text" name="caption" required='true' /><br />
 
-
+                {% if data %}
                 <label for="albums">Select album:</label>
                 <select name="album">
                     {% for row in data %}
                             <option>{{ row }}</option>
                     {% endfor %}
                 </select><br />
+                <input type="checkbox" name="no_album" value="no album selected">
+                <label for="no_album"> Upload photo without an album</label><br>
+                {% endif %}
            
             
                 <label for="tag" style="display: inline;">Enter a tag(s) (separated by commas): </label>

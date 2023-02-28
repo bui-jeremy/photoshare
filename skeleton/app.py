@@ -196,13 +196,17 @@ def upload_file():
 		imgfile = request.files['photo']
 		caption = request.form.get('caption')
 		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
-		album_id = getAlbumId(album)
-		
+		no_album = request.form.get('no_album') 
 		photo_data =imgfile.read()
 		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
-		conn.commit()
-
+		if album == None or no_album != None:
+			cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption) VALUES (%s, %s, %s)''', (photo_data, uid, caption))
+			conn.commit()
+		else:
+			album_id = getAlbumId(album)
+			cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
+			conn.commit()
+		
 		# incoporate tags 
 		tags = request.form.get('tags')
 		if (tags != ""):
@@ -222,6 +226,8 @@ def upload_file():
 @app.route('/recommendation', methods=['GET'])
 def pictureRecommendations():
 	pictures = getPictureRecsInOrder()
+	if pictures == "":
+		return render_template('pictureRecommend.html', base64=base64)
 	return render_template('pictureRecommend.html', pictures=pictures, base64=base64)
 
 # gets current user's top 3 tags in order
@@ -234,7 +240,6 @@ def getCurrentUserTopTags():
 	tags = []
 	for i in cursor:
 		tags.append(i[0])
-		print(i)
 	return tags
 
 
@@ -243,13 +248,33 @@ def getPictureRecsInOrder():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	tags = getCurrentUserTopTags()
 	cursor = conn.cursor()
-	cursor.execute("SELECT imgdata, pid, caption FROM \
-					(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}' OR tag_id = '{2}') AND user_id != '{3}' \
-					GROUP BY picture_id) t1 \
-					NATURAL JOIN \
-					(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
-					GROUP BY picture_id) t2 \
-					ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], tags[2], uid))
+	if len(tags) == 3:
+		cursor.execute("SELECT imgdata, pid, caption FROM \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}' OR tag_id = '{2}') AND user_id != '{3}' \
+						GROUP BY picture_id) t1 \
+						NATURAL JOIN \
+						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
+						GROUP BY picture_id) t2 \
+						ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], tags[2], uid))
+	elif len(tags) == 2:
+		cursor.execute("SELECT imgdata, pid, caption FROM \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}') AND user_id != '{2}' \
+						GROUP BY picture_id) t1 \
+						NATURAL JOIN \
+						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
+						GROUP BY picture_id) t2 \
+						ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], uid))
+	elif len(tags) == 1:
+		cursor.execute("SELECT imgdata, pid, caption FROM \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}') AND user_id != '{1}' \
+						GROUP BY picture_id) t1 \
+						NATURAL JOIN \
+						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
+						GROUP BY picture_id) t2 \
+						ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], uid))
+	else:
+		# user has used no tags
+		return ""
 	conn.commit()
 	return cursor.fetchall()
 
@@ -649,6 +674,16 @@ def delete_photo():
 	conn.commit()
 	return viewAlbumPage(album, "Photo deleted!", uid)
 
+def deleteFromAlbum():
+	picture_id = request.form.get('hidden')
+	album_id = getAlbumIDFromPhotoID(picture_id)
+	uid = getUserIDFromEmail(flask_login.current_user.id)
+	album = getAlbumNameFromAlbumID(album_id)
+	cursor = conn.cursor()
+	print(cursor.execute("UPDATE Pictures SET album_id = NULL WHERE picture_id = '{0}'".format(int(picture_id))))
+	conn.commit()
+	return viewAlbumPage(album, "Photo deleted from album!", uid)
+
 def getAlbumIDFromPhotoID(picture_id):
 	cursor = conn.cursor()
 	cursor.execute("SELECT album_id FROM Pictures WHERE picture_id = '{0}'".format(int(picture_id)))
@@ -760,12 +795,13 @@ def already_liked(picture_id, uid):
 def picture_handler():
 	cmd = request.form.get("cmd")
 	user_id = request.form.get("user_id")
-	print('hi')
 	print(user_id)
 	if cmd == "Like":
 		return like_photo()
 	elif cmd == "Delete Photo":
 		return delete_photo()
+	elif cmd == "Delete From Album":
+		return deleteFromAlbum()
 	else: 
 		# check to see if a tag is clicked on
 		tag = request.form.get("tag")
@@ -801,8 +837,12 @@ def tagPictures(tag_description, user_id):
 	conn.cursor()
 	cursor.execute("SELECT imgdata, picture_id, caption, user_id FROM Pictures WHERE user_id = '{0}' AND picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description = '{1}'))".format(user_id, tag_description))
 	data = cursor.fetchall()
-	personal = getNameFromUserId(user_id)
-	return render_template('tagPictures.html', photos = data, personal=personal, name = tag_description, base64 = base64)
+	if user_id != -1:
+		personal = getNameFromUserId(user_id)
+		return render_template('tagPictures.html', photos = data, personal=personal, name = tag_description, base64 = base64)
+	else:
+		return render_template('tagPictures.html', photos = data, name = tag_description, base64 = base64)
+	
 
 
 def getTagIdFromDescription(tag_description):
@@ -828,10 +868,12 @@ def tagSearch_handler():
 	# split the potential string of tags into a list
 
 	if (cmd == "Search"):
+		return tagPictures(search, -1)
 		if (search != ""):
 			search = search.split(',')
 		return displayAllPhotos(search)
 	elif (tag != None): 
+		return tagPictures(tag, -1)
 		return displayAllPhotos([tag])
 	else:
 		return getTopTags()
@@ -877,10 +919,5 @@ def getTopTags():
 
 
 ### END TAG VIEW ###
-
-### PHOTO RECOMMENDATIONS ###
-
-
-
 
 ### end of new stuff
