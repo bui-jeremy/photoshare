@@ -50,15 +50,19 @@
 
 <h2>Recommended Pictures: </h2>
 {% if pictures %}
-    <ul>
-        {% for picture in pictures %}
-            <li>
-                <a href="/picture/{{picture.id}}">
-                    <img src="{{picture.url}}" alt="{{picture.name}}">
-                </a>
-            </li>
-        {% endfor %}
-    </ul>
+<ul>
+    {% for picture in pictures %}
+        <li>
+            {{picture[2]}}
+            <form method="post" action="{{ url_for('albumPicture_handler') }}">
+                <input type="hidden" name="hidden" value="{{ picture[1] }}" />
+                <button type="submit" value="hidden">
+                    <img src='data:image/jpg;base64, {{ base64.b64encode(picture[0]).decode("ascii") }}' alt="buttonpng" />
+                </button>
+            </form>
+        </li>
+    {% endfor %}
+</ul>
 {% else %}
     <p>No pictures found.</p>
 {% endif %}

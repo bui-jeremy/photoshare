@@ -205,9 +205,10 @@ def upload_file():
 		if (tags != ""):
 			tags = tags.split(',')
 			for i in tags: 
-				cursor.execute("INSERT INTO Tags (tag_description) VALUES ('{0}')".format(i))
-				conn.commit()
-				cursor.execute("INSERT INTO Photo_contain (tag_id, picture_id) VALUES ('{0}', '{1}')".format(getMaxTagID(), getMaxPictureId()))
+				if not tagExists(i):
+					cursor.execute("INSERT INTO Tags (tag_description) VALUES ('{0}')".format(i))
+					conn.commit()
+				cursor.execute("INSERT INTO Photo_contain (tag_id, picture_id) VALUES ('{0}', '{1}')".format(getIDFromTagDescription(i), getMaxPictureId()))
 				conn.commit()
 
 		return render_template('hello.html', name=flask_login.current_user.id, message='Photo uploaded!', photos=getUsersPhotos(uid), base64=base64)
@@ -215,6 +216,53 @@ def upload_file():
 	else:
 		return render_template('upload.html', data=albums)
 	
+@app.route('/recommendation', methods=['GET'])
+def pictureRecommendations():
+	pictures = getPictureRecsInOrder()
+	return render_template('pictureRecommend.html', pictures=pictures, base64=base64)
+
+# gets current user's top 3 tags in order
+def getCurrentUserTopTags():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	cursor = conn.cursor()
+	cursor.execute("SELECT tag_id FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN Tags WHERE (user_id = '{0}') \
+					GROUP BY tag_id ORDER BY COUNT(tag_id) DESC LIMIT 3".format(uid))
+	conn.commit()
+	tags = []
+	for i in cursor:
+		tags.append(i[0])
+		print(i)
+	return tags
+
+
+# gets picture recommendations, in sql orders first by how many tags and then conciseness (calculates difference)
+def getPictureRecsInOrder():
+	uid = getUserIdFromEmail(flask_login.current_user.id)
+	tags = getCurrentUserTopTags()
+	cursor = conn.cursor()
+	cursor.execute("SELECT imgdata, pid, caption FROM \
+					(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}' OR tag_id = '{2}') AND user_id != '{3}' \
+					GROUP BY picture_id) t1 \
+					NATURAL JOIN \
+					(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
+					GROUP BY picture_id) t2 \
+					ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], tags[2], uid))
+	conn.commit()
+	return cursor.fetchall()
+
+def tagExists(description):
+	cursor = conn.cursor()
+	if cursor.execute("SELECT tag_id  FROM Tags WHERE (tag_description = '{0}')".format(description)):
+		#this means there are greater than zero entries with this relationship
+		return True
+	else:
+		return False
+
+def getIDFromTagDescription(description):
+	cursor = conn.cursor()
+	cursor.execute("SELECT tag_id FROM Tags WHERE tag_description = '{0}'".format(description))
+	return cursor.fetchone()[0]
+
 # used to return most recently created picture id
 def getMaxPictureId():
 	cursor = conn.cursor()
@@ -566,7 +614,7 @@ def picture(picture_id):
 	tags = retrieve_tags(picture_id)
 	# load in likes and users
 	num_likes, users_liked = count_likes(picture_id)
-	owner = (getUserIDFromPictureID(picture_id) == flask_login.current_user.id)
+	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
 	user_id = getUserIDFromPictureID(picture_id)
 	return render_template('picture.html', photo=photo, name = name, comment=comment, user_id=user_id, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
 
@@ -591,11 +639,12 @@ def getUserIDFromPictureID(picture_id):
 def delete_photo():
 	picture_id = request.form.get('hidden')
 	album_id = getAlbumIDFromPhotoID(picture_id)
+	uid = getUserIDFromEmail(flask_login.current_user.id)
 	album = getAlbumNameFromAlbumID(album_id)
 	cursor = conn.cursor()
 	print(cursor.execute("DELETE FROM Pictures WHERE picture_id = '{0}'".format(int(picture_id))))
 	conn.commit()
-	return viewAlbumPage(album, "Photo deleted!")
+	return viewAlbumPage(album, "Photo deleted!", uid)
 
 def getAlbumIDFromPhotoID(picture_id):
 	cursor = conn.cursor()
@@ -776,13 +825,8 @@ def tagSearch_handler():
 	# split the potential string of tags into a list
 
 	if (cmd == "Search"):
-<<<<<<< Updated upstream
-		search = search.split(',')
-
-=======
 		if (search != ""):
 			search = search.split(',')
->>>>>>> Stashed changes
 		return displayAllPhotos(search)
 	elif (tag != None): 
 		return displayAllPhotos([tag])
@@ -791,25 +835,24 @@ def tagSearch_handler():
 	
 # refresh page with all the photos that have the tag
 @app.route("/tagSearch")
-def displayAllPhotos(tag_list):
+def displayAllPhotos(tag_description):
 	# combine into tuples of string ex "Hello","World"
-	new_tag_list = []
-	for tag in tag_list:
-		new_tag_list.append("'" + tag + "'")
-	tag_description  = ",".join(new_tag_list)
-	conn.cursor()
-<<<<<<< Updated upstream
 	tag_list = []
 	for tag in tag_description:
 		tag_list.append("'" + tag + "'")
+	size_list = len(tag_list)
 	tag_list = ",".join(tag_list)
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description IN ({0})))".format(tag_list))
-=======
-	print(tag_description)
-	cursor.execute("SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN (SELECT picture_id FROM photo_contain WHERE tag_id IN (SELECT tag_id FROM Tags WHERE tag_description IN ({0})))".format(tag_description))
->>>>>>> Stashed changes
+
+	conn.cursor()
+	cursor.execute(''' 
+					   SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN
+					   (SELECT picture_id FROM photo_contain 
+					   JOIN tags on photo_contain.tag_id = tags.tag_id 
+					   WHERE tags.tag_description in ({0}) GROUP BY photo_contain.picture_id 
+					   HAVING COUNT(DISTINCT tags.tag_id) =  {1} )'''.format(tag_list, size_list))
 	data = cursor.fetchall()
 	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)
+
 
 # return top 3 most used tags
 def getTopTags():
@@ -819,5 +862,13 @@ def getTopTags():
 	for i in cursor:
 		tags[i[0]] = i[1]
 	return render_template('tagSearch.html', tags = tags)
+
+
+### END TAG VIEW ###
+
+### PHOTO RECOMMENDATIONS ###
+
+
+
 
 ### end of new stuff
