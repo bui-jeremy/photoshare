@@ -14,7 +14,7 @@ from flask import Flask, Response, request, render_template, redirect, url_for
 from flask import Flask, Response, request, render_template, redirect, url_for, session, flash
 from flaskext.mysql import MySQL
 import flask_login 
-from flask_login import AnonymousUserMixin
+from flask_login import AnonymousUserMixin, current_user
 
 #for image uploading
 import os, base64
@@ -330,12 +330,11 @@ if __name__ == "__main__":
 ### new stuff:
 
 ######## FRIEND METHODS #########
-
-
+		
 # 	still need to make changes so friend search only appears when user is logged in
 #	friend is added immediately upon finding them and hitting submit button
 
-@app.route('/', methods=['POST', 'GET'])
+@app.route('/', methods=['POST','GET'])
 def hello_friend_handler():
 	try: 
 		cmd = request.form.get('cmd')
@@ -362,7 +361,7 @@ def search_friends(email):
 	if test:
 		return render_template('hello.html', message='user does not exist')
 	else: 
-		if (flask_login.current_user != 'Anonymous'): 
+		if (current_user.is_authenticated): 
 			super = getUserIdFromEmail(flask_login.current_user.id)
 		else:  
 			super = ""
@@ -711,17 +710,21 @@ def insert_comment():
 	picture_id = request.form.get('hidden')
 	text = request.form.get('comment')
 
-	if (flask_login.current_user.id == "Anonymous"):
-		uid = None
-	else: 
+	if (current_user.is_authenticated):
 		uid = getUserIDFromEmail(flask_login.current_user.id)
+	else: 
+		uid = None
+	print(uid)
 	doc = date.today()
 
 	photo = getPhotoFromPictureID(picture_id)
 	name = getNameFromPictureID(picture_id)
 	tags = retrieve_tags(picture_id)
 	num_likes, users_liked = count_likes(picture_id)
-	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
+	if (uid != None):
+		owner = (getUserIDFromPictureID(picture_id) == uid)
+	else: 
+		owner = False
 
 	# check if user is trying to comment on their own picture
 	cursor = conn.cursor()
@@ -774,17 +777,22 @@ def count_likes(picture_id):
 
 @app.route("/picture")
 def like_photo():
+	# pass through same variables
 	picture_id = request.form.get('hidden')
-	uid = getUserIDFromEmail(flask_login.current_user.id)
+	photo = getPhotoFromPictureID(picture_id)
+	name = getNameFromPictureID(picture_id)
+	num_likes, users_liked =count_likes(picture_id)
+	comment = retrieve_comments(picture_id)
+	tags = retrieve_tags(picture_id)
+	user_id = getUserIDFromPictureID(picture_id)
+	
+	if (current_user.is_authenticated):
+		uid = getUserIDFromEmail(flask_login.current_user.id)
+	else: 
+		return render_template('picture.html', err_message='Login to like a photo!', owner=False, photo=photo, name=name, user_id = user_id, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	cursor = conn.cursor()
 	if already_liked(picture_id, uid): 
-		photo = getPhotoFromPictureID(picture_id)
-		name = getNameFromPictureID(picture_id)
-		num_likes, users_liked =count_likes(picture_id)
-		comment = retrieve_comments(picture_id)
-		tags = retrieve_tags(picture_id)
 		owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
-		user_id = getUserIDFromPictureID(picture_id)
 		return render_template('picture.html', err_message='Already Liked!', owner=owner, photo=photo, name=name, user_id = user_id, comment=comment, tags=tags, users_liked=users_liked, num_likes=num_likes, base64=base64)
 	cursor.execute("INSERT INTO Liked_by (user_id, picture_id) VALUES ('{0}', '{1}')".format(uid, picture_id))
 	conn.commit()
@@ -802,7 +810,6 @@ def already_liked(picture_id, uid):
 def picture_handler():
 	cmd = request.form.get("cmd")
 	user_id = request.form.get("user_id")
-	print(user_id)
 	if cmd == "Like":
 		return like_photo()
 	elif cmd == "Delete Photo":
