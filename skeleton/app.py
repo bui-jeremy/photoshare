@@ -224,6 +224,7 @@ def upload_file():
 		return render_template('upload.html', data=albums)
 	
 @app.route('/recommendation', methods=['GET'])
+@flask_login.login_required
 def pictureRecommendations():
 	pictures = getPictureRecsInOrder()
 	if pictures == "":
@@ -334,7 +335,7 @@ if __name__ == "__main__":
 # 	still need to make changes so friend search only appears when user is logged in
 #	friend is added immediately upon finding them and hitting submit button
 
-@app.route('/', methods=['GET','POST'])
+@app.route('/', methods=['POST', 'GET'])
 def hello_friend_handler():
 	try: 
 		cmd = request.form.get('cmd')
@@ -344,6 +345,7 @@ def hello_friend_handler():
 	except:
 		print("couldn't find all tokens")
 		return flask.redirect(flask.url_for('hello'))
+	
 	if cmd == 'Search':
 		return search_friends(email)
 	elif cmd == 'Add Friend':
@@ -351,25 +353,27 @@ def hello_friend_handler():
 	elif photo_id != None: 
 		return picture(photo_id)
 	else:
-		return friend_profile(temp_email)
+		data = view_albums(getUserIDFromEmail(temp_email))
+		return friend_profile(temp_email, data)
 
 @app.route('/')
 def search_friends(email):
-	
 	test = isEmailUnique(email)
 	if test:
 		return render_template('hello.html', message='user does not exist')
 	else: 
-		super = getUserIdFromEmail(flask_login.current_user.id)
+		if (flask_login.current_user != 'Anonymous'): 
+			super = getUserIdFromEmail(flask_login.current_user.id)
+		else:  
+			super = ""
 		sub = getUserIdFromEmail(email)
 		if super == sub: # checks if searching for themselves
 			return render_template('hello.html', message='cannot search for yourself')
 		else: 
-			return render_template('hello.html', message='user exists', show_add_view_btns = email)
+			return render_template('hello.html', message='user exists')
 		
 # search for one particular user, adds to friends if user exists
 @app.route('/')
-@flask_login.login_required
 def add_friends(email):
 	cursor = conn.cursor()
 	test =  isEmailUnique(email)
@@ -642,7 +646,10 @@ def picture(picture_id):
 	tags = retrieve_tags(picture_id)
 	# load in likes and users
 	num_likes, users_liked = count_likes(picture_id)
-	owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
+	if (flask_login.current_user.is_authenticated):
+		owner = (getUserIDFromPictureID(picture_id) == getUserIDFromEmail(flask_login.current_user.id))
+	else: 
+		owner = False
 	user_id = getUserIDFromPictureID(picture_id)
 	return render_template('picture.html', photo=photo, name = name, comment=comment, user_id=user_id, num_likes=num_likes, users_liked=users_liked, owner = owner, tags=tags, base64=base64)
 
