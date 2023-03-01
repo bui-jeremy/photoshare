@@ -333,12 +333,12 @@ if __name__ == "__main__":
 		
 # 	still need to make changes so friend search only appears when user is logged in
 #	friend is added immediately upon finding them and hitting submit button
-
+	
 @app.route('/', methods=['POST','GET'])
 def hello_friend_handler():
 	try: 
 		cmd = request.form.get('cmd')
-		email = request.form.get('email')
+		email = request.form.get('search_email')
 		temp_email = request.form.get('hidden')
 		photo_id = request.form.get('photo_id')
 	except:
@@ -358,6 +358,7 @@ def hello_friend_handler():
 @app.route('/')
 def search_friends(email):
 	test = isEmailUnique(email)
+	print(current_user.is_authenticated)
 	if test:
 		return render_template('hello.html', message='user does not exist')
 	else: 
@@ -369,7 +370,7 @@ def search_friends(email):
 		if super == sub: # checks if searching for themselves
 			return render_template('hello.html', message='cannot search for yourself')
 		else: 
-			return render_template('hello.html', message='user exists')
+			return render_template('hello.html', message='user exists', show_add_view_btns = email)
 		
 # search for one particular user, adds to friends if user exists
 @app.route('/')
