@@ -196,12 +196,10 @@ def upload_file():
 		imgfile = request.files['photo']
 		caption = request.form.get('caption')
 		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
-		no_album = request.form.get('no_album') 
 		photo_data =imgfile.read()
 		cursor = conn.cursor()
-		if album == None or no_album != None:
-			cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption) VALUES (%s, %s, %s)''', (photo_data, uid, caption))
-			conn.commit()
+		if album == None:
+			return render_template('upload.html', data=albums, message="Create an album first!")
 		else:
 			album_id = getAlbumId(album)
 			cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
@@ -681,15 +679,6 @@ def delete_photo():
 	conn.commit()
 	return viewAlbumPage(album, "Photo deleted!", uid)
 
-def deleteFromAlbum():
-	picture_id = request.form.get('hidden')
-	album_id = getAlbumIDFromPhotoID(picture_id)
-	uid = getUserIDFromEmail(flask_login.current_user.id)
-	album = getAlbumNameFromAlbumID(album_id)
-	cursor = conn.cursor()
-	print(cursor.execute("UPDATE Pictures SET album_id = NULL WHERE picture_id = '{0}'".format(int(picture_id))))
-	conn.commit()
-	return viewAlbumPage(album, "Photo deleted from album!", uid)
 
 def getAlbumIDFromPhotoID(picture_id):
 	cursor = conn.cursor()
@@ -815,8 +804,6 @@ def picture_handler():
 		return like_photo()
 	elif cmd == "Delete Photo":
 		return delete_photo()
-	elif cmd == "Delete From Album":
-		return deleteFromAlbum()
 	else: 
 		# check to see if a tag is clicked on
 		tag = request.form.get("tag")

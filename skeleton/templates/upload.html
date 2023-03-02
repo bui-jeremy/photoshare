@@ -69,8 +69,10 @@
                             <option>{{ row }}</option>
                     {% endfor %}
                 </select><br />
-                <input type="checkbox" name="no_album" value="no album selected">
-                <label for="no_album"> Upload photo without an album</label><br>
+                
+                {% endif %}
+                {% if message %}
+                    <h4><font color="red">{{message}}</font></h4>
                 {% endif %}
            
             
