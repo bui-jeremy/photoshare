@@ -368,7 +368,10 @@ def search_friends(email):
 		if super == sub: # checks if searching for themselves
 			return render_template('hello.html', message='cannot search for yourself')
 		else: 
-			return render_template('hello.html', message='user exists', show_add_view_btns = email)
+			if (current_user.is_authenticated):
+				return render_template('hello.html', message='user exists', show_add_view_btns = email)
+			else: 
+				return render_template('hello.html', message='user exists', show_add_view_btns = email, anonymous_user=True)
 		
 # search for one particular user, adds to friends if user exists
 @app.route('/')
@@ -812,12 +815,6 @@ def picture_handler():
 		else:
 	 		return insert_comment() # hit button to submit comment
 	
-### RECOMMENDED USERS ###
-@app.route("/pictureRecommend", methods=['GET'])
-def recommendation():
-	conn.cursor()
-	cursor.execute("SELECT uid FROM friends INNER JOIN user on friends.")
-
 ### COMMENT SEARCH ###
 @app.route("/commentSearch", methods=['GET', 'POST'])
 def commentSearch():
@@ -888,7 +885,7 @@ def displayAllPhotos(tag_description):
 					   SELECT imgdata, picture_id, caption FROM Pictures WHERE picture_id IN
 					   (SELECT picture_id FROM photo_contain 
 					   JOIN tags on photo_contain.tag_id = tags.tag_id 
-					   WHERE tags.tag_description in ({0}) GROUP BY photo_contain.picture_id 
+					   WHERE tags.tag_description IN ({0}) GROUP BY photo_contain.picture_id 
 					   HAVING COUNT(DISTINCT tags.tag_id) =  {1} )'''.format(tag_list, size_list))
 	data = cursor.fetchall()
 	return render_template('tagSearch.html', photos = data, name = tag_list, base64 = base64)

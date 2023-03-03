@@ -75,7 +75,9 @@
   <p>{{ show_add_view_btns }} </p>
   <input type="hidden" name="hidden" value="{{ show_add_view_btns }}">
   <input type="submit" name = "cmd" value = "Add Friend" />
+  {% if not anonymous_user %}
   <input type="submit" name = "cmd" value = "View Profile" />
+  {% endif %}
   {% endif %}
 </form>
 
