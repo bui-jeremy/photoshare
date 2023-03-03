@@ -60,12 +60,13 @@
             <form method="post" action="{{ url_for('albumPicture_handler') }}">
                 <input type="hidden" name="hidden" value="{{ picture[1] }}" />
                 <button type="submit" value="hidden">
-                    <img src='data:image/jpg;base64, {{ base64.b64encode(picture[0]).decode("ascii") }}' alt="buttonpng" />
+                    <img src='data:image/jpg;base64, {{ base64.b64encode(picture[0]).decode("ascii") }}' alt="buttonpng" width="200" height="200"/>
                 </button>
             </form>
         </li>
     {% endfor %}
 </ul>
 {% else %}
-    <p>No pictures found.</p>
+<h4><font color="red">You have no pictures with common tags! Please upload more tags!</font></h4>
+<h3><a href='/upload'>Upload Picture</a></h3>
 {% endif %}

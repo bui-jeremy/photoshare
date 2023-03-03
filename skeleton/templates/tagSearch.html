@@ -72,7 +72,7 @@
 <br>
 <form method = "post" action = "{{ url_for('tagSearch_handler') }}">
     <label for = "search"> Search for trending tag(s) (separated by comma): </label>
-    <input type = "text" name = "search"/>
+    <input type = "text" name = "search"  pattern="^\S+$"/>
     <input type="submit" name = "cmd" value = "Search" /> <br>
 
     {% if tags %}

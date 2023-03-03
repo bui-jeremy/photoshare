@@ -55,7 +55,13 @@
     <body>
         <div class="title">
             <h1>Upload a photo to Photoshare</h1>
+
+        {% if no_albums %}
+            <h4><font color="red">You have no albums! Please create an album before uploading a photo.</font></h4>
+            <h3><a href='/album'>View albums</a></h3>
         </div>
+        {% else %}
+
             <form method="post" enctype="multipart/form-data" action="/upload">
                 <label for="photo"><font color="red">*</font>Select photo:</label>
                 <input type="file" name="photo" required='true' /><br />
@@ -81,4 +87,5 @@
                 <br />
                 <input type="submit" name="cmd" value="Upload" />
             </form>
+        {% endif %}
     </body>

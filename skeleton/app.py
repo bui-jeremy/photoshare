@@ -192,18 +192,17 @@ def allowed_file(filename):
 def upload_file():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	albums = view_albums(uid) # this was also added for the else statement
+	if albums == []:
+			return render_template('upload.html', data=albums, no_albums=True)
 	if request.method == 'POST':
 		imgfile = request.files['photo']
 		caption = request.form.get('caption')
 		album = request.form.get('album')   # code modified here and in execute statement to add album id, selection added in upload
 		photo_data =imgfile.read()
 		cursor = conn.cursor()
-		if album == None:
-			return render_template('upload.html', data=albums, message="Create an album first!")
-		else:
-			album_id = getAlbumId(album)
-			cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
-			conn.commit()
+		album_id = getAlbumId(album)
+		cursor.execute('''INSERT INTO Pictures (imgdata, user_id, caption, album_id) VALUES (%s, %s, %s, %s )''', (photo_data, uid, caption, album_id))
+		conn.commit()
 		
 		# incoporate tags 
 		tags = request.form.get('tags')
@@ -824,7 +823,7 @@ def commentSearch():
 	users = {}
 	for i in cursor:
 		users[getNameFromUserId(i[0])] = (getEmailFromUserId(i[0]), i[1])
-	return render_template('commentSearch.html', name=search, users = users)
+	return render_template('commentSearch.html', name=search, users = users, not_found = not_found)
 
 ### END OF COMMENT SEARCH ###
 
