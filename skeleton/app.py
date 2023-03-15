@@ -823,7 +823,7 @@ def commentSearch():
 	users = {}
 	for i in cursor:
 		users[getNameFromUserId(i[0])] = (getEmailFromUserId(i[0]), i[1])
-	return render_template('commentSearch.html', name=search, users = users, not_found = not_found)
+	return render_template('commentSearch.html', name=search, users = users)
 
 ### END OF COMMENT SEARCH ###
 
