@@ -232,8 +232,8 @@ def pictureRecommendations():
 def getCurrentUserTopTags():
 	uid = getUserIdFromEmail(flask_login.current_user.id)
 	cursor = conn.cursor()
-	cursor.execute("SELECT tag_id FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN Tags WHERE (user_id = '{0}') \
-					GROUP BY tag_id ORDER BY COUNT(tag_id) DESC LIMIT 3".format(uid))
+	cursor.execute("SELECT tag_description FROM (SELECT tag_id,tag_description FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN Tags WHERE (user_id = '{0}') \
+					GROUP BY tag_id ORDER BY COUNT(tag_id) DESC LIMIT 3) as tag_combined".format(uid))
 	conn.commit()
 	tags = []
 	for i in cursor:
@@ -248,7 +248,7 @@ def getPictureRecsInOrder():
 	cursor = conn.cursor()
 	if len(tags) == 3:
 		cursor.execute("SELECT imgdata, pid, caption FROM \
-						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}' OR tag_id = '{2}') AND user_id != '{3}' \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN tags WHERE (tag_description = '{0}' OR tag_description = '{1}' OR tag_description = '{2}') AND user_id != '{3}' \
 						GROUP BY picture_id) t1 \
 						NATURAL JOIN \
 						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
@@ -256,7 +256,7 @@ def getPictureRecsInOrder():
 						ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], tags[2], uid))
 	elif len(tags) == 2:
 		cursor.execute("SELECT imgdata, pid, caption FROM \
-						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}' OR tag_id = '{1}') AND user_id != '{2}' \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN tags WHERE (tag_description = '{0}' OR tag_description = '{1}') AND user_description != '{2}' \
 						GROUP BY picture_id) t1 \
 						NATURAL JOIN \
 						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
@@ -264,7 +264,7 @@ def getPictureRecsInOrder():
 						ORDER BY specified_tags DESC, t2.all_tags-t1.specified_tags ".format(tags[0], tags[1], uid))
 	elif len(tags) == 1:
 		cursor.execute("SELECT imgdata, pid, caption FROM \
-						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain WHERE (tag_id = '{0}') AND user_id != '{1}' \
+						(SELECT picture_id as pid, imgdata, caption, COUNT(picture_id) AS specified_tags FROM Pictures NATURAL JOIN Photo_contain NATURAL JOIN tags WHERE (tag_description = '{0}') AND user_description != '{1}' \
 						GROUP BY picture_id) t1 \
 						NATURAL JOIN \
 						(SELECT picture_id as pid, COUNT(picture_id) AS all_tags FROM Pictures NATURAL JOIN Photo_contain \
